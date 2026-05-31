@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
 import { Colors } from '../../constants/colors';
 
@@ -82,22 +83,46 @@ const md = StyleSheet.create({
 // ─── Screen ────────────────────────────────────────────────────────────────────
 export default function WordListScreen() {
   const { listId } = useLocalSearchParams<{ listId: string }>();
-  const list = LIST_DATA[listId ?? '1'];
-  const [query, setQuery] = useState('');
+  const staticList = LIST_DATA[listId ?? ''];
+  const [query,       setQuery]       = useState('');
+  const [customWords, setCustomWords] = useState<Word[]>([]);
+  const [customList,  setCustomList]  = useState<{ name: string; color: string; bg: string; symbol: string } | null>(null);
+
+  // Load custom words from AsyncStorage every time screen is focused
+  useFocusEffect(useCallback(() => {
+    (async () => {
+      // Custom words added to any list
+      const raw = await AsyncStorage.getItem(`words_${listId}`);
+      setCustomWords(raw ? JSON.parse(raw) : []);
+
+      // If this is a user-created list (not in LIST_DATA), load its metadata
+      if (!staticList) {
+        const listsRaw = await AsyncStorage.getItem('custom_lists');
+        const lists = listsRaw ? JSON.parse(listsRaw) : [];
+        const found = lists.find((l: any) => l.id === listId);
+        if (found) setCustomList({ name: found.name, color: found.color, bg: found.color + '18', symbol: found.symbol });
+      }
+    })();
+  }, [listId, staticList]));
+
+  const list = staticList
+    ? { ...staticList, words: [...staticList.words, ...customWords] }
+    : customList
+      ? { ...customList, words: customWords }
+      : null;
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return list?.words ?? [];
+    const all = list?.words ?? [];
+    if (!query.trim()) return all;
     const q = query.toLowerCase();
-    return (list?.words ?? []).filter(
-      w => w.word.toLowerCase().includes(q) || w.tr.toLowerCase().includes(q)
-    );
+    return all.filter(w => w.word.toLowerCase().includes(q) || w.tr.toLowerCase().includes(q));
   }, [query, list]);
 
   if (!list) return null;
 
-  const mastered  = list.words.filter(w => w.mastery === 4).length;
-  const learning  = list.words.filter(w => w.mastery > 0 && w.mastery < 4).length;
-  const newWords  = list.words.filter(w => w.mastery === 0).length;
+  const mastered = list.words.filter(w => w.mastery === 4).length;
+  const learning = list.words.filter(w => w.mastery > 0 && w.mastery < 4).length;
+  const newWords = list.words.filter(w => w.mastery === 0).length;
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>

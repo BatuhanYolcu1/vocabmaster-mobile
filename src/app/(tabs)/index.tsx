@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SymbolView } from 'expo-symbols';
 import { Colors } from '../../constants/colors';
 
 const DEMO_STATS = {
@@ -23,16 +24,37 @@ const DEMO_STATS = {
   ],
 };
 
-const STUDY_MODES = [
-  { title: 'Flashcard', color: Colors.primary, bg: Colors.primaryLight, route: '/study/select' },
-  { title: 'Quiz', color: Colors.green, bg: Colors.greenLight, route: '/study/select' },
-  { title: 'Yazarak', color: Colors.purple, bg: Colors.purpleLight, route: '/study/select' },
+const DEFAULT_LIST_IDS = ['1', '2', '3', '4'];
+
+const QUICK_MODES = [
+  { title: 'Flashcard', symbol: 'rectangle.on.rectangle.fill', color: Colors.primary,  bg: Colors.primaryLight, dest: '/study/flashcard' },
+  { title: 'Quiz',      symbol: 'checkmark.circle.fill',       color: Colors.green,    bg: Colors.greenLight,   dest: '/study/quiz'      },
+  { title: 'Yazarak',   symbol: 'keyboard.fill',               color: Colors.purple,   bg: Colors.purpleLight,  dest: '/study/typing'    },
+  { title: 'Konuşma',   symbol: 'mic.fill',                    color: '#EC4899',       bg: '#FDF2F8',           dest: '/study/speaking'  },
 ];
 
 export default function DashboardScreen() {
   const [stats] = useState(DEMO_STATS);
   const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState('');
+  const [randomListId, setRandomListId] = useState('1');
+  const [randomListName, setRandomListName] = useState('B1 Temel Kelimeler');
+
+  const loadRandomList = useCallback(async () => {
+    const raw = await AsyncStorage.getItem('custom_lists');
+    const custom: { id: string; name: string }[] = raw ? JSON.parse(raw) : [];
+    const defaultNames: Record<string, string> = {
+      '1': 'B1 Temel Kelimeler', '2': 'İş İngilizcesi',
+      '3': 'Akademik Kelimeler', '4': 'Seyahat',
+    };
+    const all = [
+      ...DEFAULT_LIST_IDS.map(id => ({ id, name: defaultNames[id] })),
+      ...custom.map(l => ({ id: l.id, name: l.name })),
+    ];
+    const picked = all[Math.floor(Math.random() * all.length)];
+    setRandomListId(picked.id);
+    setRandomListName(picked.name);
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem('onboarding_done').then(val => {
@@ -41,12 +63,14 @@ export default function DashboardScreen() {
     AsyncStorage.getItem('user_name').then(val => {
       if (val) setUserName(val);
     });
+    loadRandomList();
   }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    loadRandomList();
     setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+  }, [loadRandomList]);
 
   const dailyPct = Math.min((stats.todayWordsStudied / stats.dailyGoal) * 100, 100);
   const maxXp = Math.max(...stats.weeklyProgress.map((d) => d.xp), 1);
@@ -162,18 +186,24 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Study Modes */}
-        <Text style={styles.sectionTitle}>Hızlı Başla</Text>
-        <View style={styles.modeRow}>
-          {STUDY_MODES.map((m, i) => (
+        {/* Hızlı Başla */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Hızlı Başla</Text>
+          <TouchableOpacity onPress={loadRandomList} activeOpacity={0.7}>
+            <SymbolView name="arrow.clockwise" size={14} tintColor={Colors.primary} type="monochrome" />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.sectionSub}>{randomListName} listesiyle</Text>
+        <View style={styles.modeGrid}>
+          {QUICK_MODES.map((m, i) => (
             <TouchableOpacity
               key={i}
               style={[styles.modeCard, { borderTopColor: m.color }]}
-              onPress={() => router.push(m.route as any)}
+              onPress={() => router.push({ pathname: m.dest as any, params: { listId: randomListId } })}
               activeOpacity={0.82}
             >
               <View style={[styles.modeIcon, { backgroundColor: m.bg }]}>
-                <View style={[styles.modeIconInner, { backgroundColor: m.color }]} />
+                <SymbolView name={m.symbol as any} size={18} tintColor={m.color} type="monochrome" />
               </View>
               <Text style={[styles.modeTitle, { color: m.color }]}>{m.title}</Text>
             </TouchableOpacity>
@@ -307,16 +337,12 @@ const styles = StyleSheet.create({
   chartLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '600' },
   chartXp: { color: Colors.textMuted, fontSize: 8, fontWeight: '500' },
 
-  sectionTitle: {
-    color: Colors.textPrimary,
-    fontWeight: '700',
-    fontSize: 16,
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  modeRow: { flexDirection: 'row', gap: 10 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  sectionTitle: { color: Colors.textPrimary, fontWeight: '700', fontSize: 16 },
+  sectionSub: { color: Colors.textMuted, fontSize: 12, marginBottom: 12, marginTop: 3 },
+  modeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   modeCard: {
-    flex: 1,
+    width: '47.5%',
     backgroundColor: Colors.bgCard,
     borderRadius: 14,
     padding: 16,
@@ -330,12 +356,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   modeIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modeIconInner: { width: 14, height: 14, borderRadius: 7 },
   modeTitle: { fontSize: 12, fontWeight: '700' },
 });
