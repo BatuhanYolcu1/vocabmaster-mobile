@@ -5,18 +5,24 @@ import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
 import { Colors } from '../../constants/colors';
+import { DEFAULT_LISTS as WORD_LISTS } from '../../data/demoWords';
 
 type ListItem = {
   id: string; name: string; desc: string; symbol: string;
   color: string; count: number; iconIndex: number;
 };
 
-const DEFAULT_LISTS: ListItem[] = [
-  { id: '1', name: 'B1 Temel Kelimeler', desc: 'Günlük konuşma dili', symbol: 'book.fill',          color: Colors.primary, count: 50, iconIndex: 0 },
-  { id: '2', name: 'İş İngilizcesi',     desc: 'Profesyonel ortam',   symbol: 'briefcase.fill',     color: Colors.green,   count: 30, iconIndex: 1 },
-  { id: '3', name: 'Akademik Kelimeler', desc: 'Üniversite düzeyi',   symbol: 'graduationcap.fill', color: Colors.purple,  count: 45, iconIndex: 2 },
-  { id: '4', name: 'Seyahat',            desc: 'Gezi ve turizm',      symbol: 'airplane',           color: Colors.accent,  count: 25, iconIndex: 3 },
-];
+const DESCS: Record<string, string> = {
+  '1': 'Günlük konuşma dili',
+  '2': 'Profesyonel ortam',
+  '3': 'Üniversite düzeyi',
+  '4': 'Gezi ve turizm',
+};
+
+const DEFAULT_LISTS: ListItem[] = WORD_LISTS.map((l, i) => ({
+  id: l.id, name: l.name, desc: DESCS[l.id] ?? '', symbol: l.symbol,
+  color: l.color, count: l.words.length, iconIndex: i,
+}));
 
 export default function CategoriesScreen() {
   const [lists, setLists] = useState<ListItem[]>(DEFAULT_LISTS);
