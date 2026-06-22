@@ -1,15 +1,13 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
 import { Colors } from '../../constants/colors';
+import { DEFAULT_LISTS } from '../../data/demoWords';
 
-const LISTS = [
-  { id: '1', name: 'B1 Temel Kelimeler', count: 50, color: Colors.primary, symbol: 'book.fill' },
-  { id: '2', name: 'İş İngilizcesi', count: 30, color: Colors.green, symbol: 'briefcase.fill' },
-  { id: '3', name: 'Akademik Kelimeler', count: 45, color: Colors.purple, symbol: 'graduationcap.fill' },
-];
+type ListItem = { id: string; name: string; count: number; color: string; symbol: string };
 
 const MODES = [
   {
@@ -53,6 +51,28 @@ const MODES = [
 export default function StudySelectScreen() {
   const [step, setStep] = useState<'list' | 'mode'>('list');
   const [selectedList, setSelectedList] = useState<string | null>(null);
+  const [lists, setLists] = useState<ListItem[]>([]);
+
+  useFocusEffect(useCallback(() => {
+    setStep('list');
+    setSelectedList(null);
+    async function loadLists() {
+      const defaults: ListItem[] = DEFAULT_LISTS.map(l => ({
+        id: l.id, name: l.name, count: l.words.length, color: l.color, symbol: l.symbol,
+      }));
+      const raw = await AsyncStorage.getItem('custom_lists');
+      const custom: { id: string; name: string; icon?: string; color?: string }[] = raw ? JSON.parse(raw) : [];
+      const customItems: ListItem[] = await Promise.all(
+        custom.map(async c => {
+          const wordsRaw = await AsyncStorage.getItem(`words_${c.id}`);
+          const count = wordsRaw ? (JSON.parse(wordsRaw) as unknown[]).length : 0;
+          return { id: c.id, name: c.name, count, color: c.color || Colors.primary, symbol: c.icon || 'list.bullet' };
+        })
+      );
+      setLists([...defaults, ...customItems]);
+    }
+    loadLists();
+  }, []));
 
   const goBack = () => {
     if (step === 'mode') { setStep('list'); return; }
@@ -90,7 +110,7 @@ export default function StudySelectScreen() {
         {step === 'list' ? (
           <>
             <Text style={s.sectionLabel}>Hangi listeden çalışacaksın?</Text>
-            {LISTS.map((list) => (
+            {lists.map((list) => (
               <TouchableOpacity
                 key={list.id}
                 style={s.listCard}

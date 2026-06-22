@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 import { SymbolView } from 'expo-symbols';
@@ -13,14 +13,8 @@ import Animated, {
   withSequence, Easing,
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/colors';
-
-const DEMO_WORDS = [
-  { id: '1', word: 'Eloquent',    tr: 'Belagatlı',     type: 'adjective' },
-  { id: '2', word: 'Serendipity', tr: 'Güzel tesadüf', type: 'noun'      },
-  { id: '3', word: 'Resilient',   tr: 'Dayanıklı',     type: 'adjective' },
-  { id: '4', word: 'Ephemeral',   tr: 'Geçici',        type: 'adjective' },
-  { id: '5', word: 'Meticulous',  tr: 'Titiz',         type: 'adjective' },
-];
+import { loadStudyWords, StudyWord } from '../../data/demoWords';
+import { recordSession } from '../../lib/stats';
 
 const WORD_COLORS = [Colors.primary, '#22C55E', '#A855F7', Colors.accent, '#3B82F6'];
 const TYPE_LABELS: Record<string, string> = { noun: 'isim', verb: 'fiil', adjective: 'sıfat', adverb: 'zarf' };
@@ -33,6 +27,9 @@ function normalize(s: string) {
 }
 
 export default function TypingScreen() {
+  const { listId } = useLocalSearchParams<{ listId?: string }>();
+  const [words, setWords] = useState<StudyWord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [index,  setIndex]  = useState(0);
   const [value,  setValue]  = useState('');
   const [status, setStatus] = useState<Status>('idle');
@@ -41,10 +38,16 @@ export default function TypingScreen() {
   const [done,    setDone]    = useState(false);
   const inputRef = useRef<TextInput>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionSaved = useRef(false);
 
-  const word        = DEMO_WORDS[index];
+  useEffect(() => {
+    loadStudyWords(listId).then(w => { setWords(w); setLoading(false); });
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [listId]);
+
+  const word        = words[index];
   const accentColor = WORD_COLORS[index % WORD_COLORS.length];
-  const progress    = (index + 1) / DEMO_WORDS.length;
+  const progress    = words.length > 0 ? (index + 1) / words.length : 0;
 
   // Animations
   const cardScale  = useSharedValue(1);
@@ -89,7 +92,7 @@ export default function TypingScreen() {
 
     timerRef.current = setTimeout(() => {
       checkScale.value = withTiming(0, { duration: 100 });
-      if (index < DEMO_WORDS.length - 1) {
+      if (index < words.length - 1) {
         setIndex(i => i + 1);
         setValue('');
         setStatus('idle');
@@ -111,10 +114,24 @@ export default function TypingScreen() {
                          : Colors.bgCard;
 
   // ── Done ──────────────────────────────────────────────────────────────────
+  if (loading || !word) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: Colors.textMuted }}>Yükleniyor…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (done) {
-    const total = DEMO_WORDS.length;
+    const total = words.length;
     const acc   = Math.round((correct / total) * 100);
     const xp    = correct * 12;
+    if (!sessionSaved.current) {
+      sessionSaved.current = true;
+      recordSession(correct, total, xp).catch(() => {});
+    }
     return (
       <SafeAreaView style={s.safe}>
         <ScrollView contentContainerStyle={s.doneContent}>
@@ -142,7 +159,7 @@ export default function TypingScreen() {
           <TouchableOpacity style={s.doneBtn} onPress={() => router.replace('/(tabs)')} activeOpacity={0.88}>
             <Text style={s.doneBtnText}>Ana Sayfaya Dön</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.againBtn} onPress={() => { setIndex(0); setValue(''); setStatus('idle'); setCorrect(0); setWrong(0); setDone(false); }} activeOpacity={0.8}>
+          <TouchableOpacity style={s.againBtn} onPress={() => { sessionSaved.current = false; setIndex(0); setValue(''); setStatus('idle'); setCorrect(0); setWrong(0); setDone(false); setLoading(false); }} activeOpacity={0.8}>
             <Text style={s.againBtnText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -247,7 +264,7 @@ export default function TypingScreen() {
             />
           </TouchableOpacity>
 
-          <Text style={s.counter}>{index + 1} / {DEMO_WORDS.length}</Text>
+          <Text style={s.counter}>{index + 1} / {words.length}</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

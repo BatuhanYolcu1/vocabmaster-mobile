@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
@@ -10,14 +10,8 @@ import Animated, {
   withRepeat, withSequence, Easing,
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/colors';
-
-const DEMO_WORDS = [
-  { id: '1', word: 'Eloquent',    tr: 'Belagatlı',     def: 'Güzel ve etkili konuşma yeteneğine sahip', type: 'adjective' },
-  { id: '2', word: 'Serendipity', tr: 'Güzel tesadüf', def: 'Şans eseri yapılan güzel bir keşif',       type: 'noun'      },
-  { id: '3', word: 'Resilient',   tr: 'Dayanıklı',     def: 'Zorluklardan çabuk toparlanabilen',        type: 'adjective' },
-  { id: '4', word: 'Ephemeral',   tr: 'Geçici',        def: 'Çok kısa süren, geçici olan',              type: 'adjective' },
-  { id: '5', word: 'Meticulous',  tr: 'Titiz',         def: 'Her detaya özen gösteren',                 type: 'adjective' },
-];
+import { loadStudyWords, StudyWord } from '../../data/demoWords';
+import { recordSession } from '../../lib/stats';
 
 const WORD_COLORS = [Colors.primary, '#22C55E', '#A855F7', Colors.accent, '#3B82F6'];
 const TYPE_LABELS: Record<string, string> = { noun: 'isim', verb: 'fiil', adjective: 'sıfat', adverb: 'zarf' };
@@ -25,16 +19,25 @@ const TYPE_LABELS: Record<string, string> = { noun: 'isim', verb: 'fiil', adject
 type Phase = 'listen' | 'recording' | 'evaluate';
 
 export default function SpeakingScreen() {
+  const { listId } = useLocalSearchParams<{ listId?: string }>();
+  const [words, setWords] = useState<StudyWord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [index,   setIndex]   = useState(0);
   const [phase,   setPhase]   = useState<Phase>('listen');
   const [correct, setCorrect] = useState(0);
   const [wrong,   setWrong]   = useState(0);
   const [done,    setDone]    = useState(false);
   const recordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionSaved = useRef(false);
 
-  const word        = DEMO_WORDS[index];
+  useEffect(() => {
+    loadStudyWords(listId).then(w => { setWords(w); setLoading(false); });
+    return () => { Speech.stop(); if (recordTimer.current) clearTimeout(recordTimer.current); };
+  }, [listId]);
+
+  const word        = words[index];
   const accentColor = WORD_COLORS[index % WORD_COLORS.length];
-  const progress    = (index + 1) / DEMO_WORDS.length;
+  const progress    = words.length > 0 ? (index + 1) / words.length : 0;
 
   // Animations
   const micScale    = useSharedValue(1);
@@ -47,21 +50,16 @@ export default function SpeakingScreen() {
 
   // Card entrance on new word
   useEffect(() => {
+    if (!word) return;
     cardY.value    = 30;
     cardOpac.value = 0;
     cardY.value    = withSpring(0,   { damping: 18, stiffness: 160 });
     cardOpac.value = withTiming(1,   { duration: 250 });
     answerOpac.value = 0;
     setPhase('listen');
-    // Auto-speak after a short delay
     const t = setTimeout(() => speakWord(), 400);
     return () => clearTimeout(t);
-  }, [index]);
-
-  useEffect(() => () => {
-    Speech.stop();
-    if (recordTimer.current) clearTimeout(recordTimer.current);
-  }, []);
+  }, [index, word]);
 
   const speakWord = () => {
     Speech.stop();
@@ -106,7 +104,7 @@ export default function SpeakingScreen() {
     }
     cardOpac.value = withTiming(0, { duration: 200 });
     setTimeout(() => {
-      if (index < DEMO_WORDS.length - 1) {
+      if (index < words.length - 1) {
         setIndex(i => i + 1);
       } else {
         setDone(true);
@@ -120,10 +118,24 @@ export default function SpeakingScreen() {
   const answerStyle = useAnimatedStyle(() => ({ opacity: answerOpac.value }));
 
   // ── Done ──────────────────────────────────────────────────────────────────
+  if (loading || !word) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: Colors.textMuted }}>Yükleniyor…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (done) {
-    const total = DEMO_WORDS.length;
+    const total = words.length;
     const acc   = Math.round((correct / total) * 100);
     const xp    = correct * 15;
+    if (!sessionSaved.current) {
+      sessionSaved.current = true;
+      recordSession(correct, total, xp).catch(() => {});
+    }
     return (
       <SafeAreaView style={s.safe}>
         <ScrollView contentContainerStyle={s.doneContent}>
@@ -151,7 +163,7 @@ export default function SpeakingScreen() {
           <TouchableOpacity style={[s.doneBtn, { backgroundColor: '#EC4899' }]} onPress={() => router.replace('/(tabs)')} activeOpacity={0.88}>
             <Text style={s.doneBtnText}>Ana Sayfaya Dön</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.againBtn} onPress={() => { setIndex(0); setPhase('listen'); setCorrect(0); setWrong(0); setDone(false); }} activeOpacity={0.8}>
+          <TouchableOpacity style={s.againBtn} onPress={() => { sessionSaved.current = false; setIndex(0); setPhase('listen'); setCorrect(0); setWrong(0); setDone(false); }} activeOpacity={0.8}>
             <Text style={s.againBtnText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -247,7 +259,7 @@ export default function SpeakingScreen() {
           </View>
         )}
 
-        <Text style={s.counter}>{index + 1} / {DEMO_WORDS.length}</Text>
+        <Text style={s.counter}>{index + 1} / {words.length}</Text>
       </View>
     </SafeAreaView>
   );

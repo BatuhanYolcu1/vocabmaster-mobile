@@ -1,9 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 import { SymbolView } from 'expo-symbols';
@@ -13,50 +13,20 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Colors } from '../../constants/colors';
+import { loadStudyWords, StudyWord } from '../../data/demoWords';
+import { recordSession, saveSRSCard } from '../../lib/stats';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 75;
 
-const DEMO_WORDS = [
-  {
-    id: '1', word: 'Eloquent', turkishTranslation: 'Belagatlı',
-    definitionTr: 'Güzel ve etkili konuşma yeteneğine sahip',
-    exampleSentence: 'She gave an eloquent speech.',
-    exampleSentenceTr: 'Belagatlı bir konuşma yaptı.', type: 'adjective',
-  },
-  {
-    id: '2', word: 'Serendipity', turkishTranslation: 'Güzel tesadüf',
-    definitionTr: 'Şans eseri yapılan güzel bir keşif',
-    exampleSentence: 'Finding that book was pure serendipity.',
-    exampleSentenceTr: 'O kitabı bulmak saf bir tesadüftü.', type: 'noun',
-  },
-  {
-    id: '3', word: 'Resilient', turkishTranslation: 'Dayanıklı',
-    definitionTr: 'Zorluklardan çabuk toparlanabilen',
-    exampleSentence: 'Children are remarkably resilient.',
-    exampleSentenceTr: 'Çocuklar inanılmaz derecede dayanıklıdır.', type: 'adjective',
-  },
-  {
-    id: '4', word: 'Ephemeral', turkishTranslation: 'Geçici',
-    definitionTr: 'Çok kısa süren, geçici olan',
-    exampleSentence: 'Fame can be ephemeral.',
-    exampleSentenceTr: 'Şöhret geçici olabilir.', type: 'adjective',
-  },
-  {
-    id: '5', word: 'Meticulous', turkishTranslation: 'Titiz',
-    definitionTr: 'Her detaya özen gösteren',
-    exampleSentence: 'She is meticulous in her work.',
-    exampleSentenceTr: 'İşinde çok titizdir.', type: 'adjective',
-  },
-];
-
 const WORD_COLORS = [Colors.primary, '#22C55E', '#A855F7', Colors.accent, '#3B82F6'];
 const TYPE_LABELS: Record<string, string> = { noun: 'isim', verb: 'fiil', adjective: 'sıfat', adverb: 'zarf' };
 
-// ─── Rating Button ────────────────────────────────────────────────────────────
-function RatingBtn({
-  label, sub, color, bg, onPress,
-}: { label: string; sub: string; color: string; bg: string; onPress: () => void }) {
+// SRS interval per rating (minutes) for first review
+const FIRST_INTERVAL: Record<'hard' | 'good' | 'easy', number> = { hard: 1, good: 10, easy: 4 * 1440 };
+const DEFAULT_EASE = 2.5;
+
+function RatingBtn({ label, sub, color, bg, onPress }: { label: string; sub: string; color: string; bg: string; onPress: () => void }) {
   return (
     <TouchableOpacity
       style={[styles.ratingBtn, { backgroundColor: bg, borderColor: color + '55', flex: 1 }]}
@@ -69,8 +39,11 @@ function RatingBtn({
   );
 }
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function FlashcardScreen() {
+  const { listId } = useLocalSearchParams<{ listId?: string }>();
+  const [words, setWords] = useState<StudyWord[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [index, setIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [hard, setHard] = useState(0);
@@ -78,23 +51,25 @@ export default function FlashcardScreen() {
   const [easy, setEasy] = useState(0);
   const [done, setDone] = useState(false);
 
-  // Use ref so gesture callbacks always see latest index
   const indexRef = useRef(0);
   indexRef.current = index;
+  const sessionSaved = useRef(false);
 
-  // Shared animation values
-  const flipVal   = useSharedValue(0);   // 0 = front, 1 = back
-  const txCard    = useSharedValue(0);   // swipe x
-  const tyCard    = useSharedValue(0);   // swipe y
-  const tiltCard  = useSharedValue(0);   // card tilt (deg)
-  const isFlippedSV = useSharedValue(0); // mirror of isFlipped for worklet
+  const flipVal    = useSharedValue(0);
+  const txCard     = useSharedValue(0);
+  const tyCard     = useSharedValue(0);
+  const tiltCard   = useSharedValue(0);
+  const isFlippedSV = useSharedValue(0);
 
-  const word        = DEMO_WORDS[index];
+  useEffect(() => {
+    loadStudyWords(listId).then(w => { setWords(w); setLoading(false); });
+  }, [listId]);
+
+  const word        = words[index];
   const accentColor = WORD_COLORS[index % WORD_COLORS.length];
   const nextColor   = WORD_COLORS[(index + 1) % WORD_COLORS.length];
-  const progress    = (index + 1) / DEMO_WORDS.length;
+  const progress    = words.length > 0 ? (index + 1) / words.length : 0;
 
-  // ── flip ──────────────────────────────────────────────────────────────────
   const flipCard = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     flipVal.value = withSpring(1, { damping: 16, stiffness: 160 });
@@ -102,7 +77,6 @@ export default function FlashcardScreen() {
     setIsFlipped(true);
   }, []);
 
-  // ── advance card (stable – uses ref) ─────────────────────────────────────
   const advanceCard = useCallback((rating: 'hard' | 'good' | 'easy') => {
     if (rating === 'hard') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -114,8 +88,15 @@ export default function FlashcardScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setEasy(e => e + 1);
     }
+
+    // Save SRS data for this card
+    if (listId && word) {
+      const interval = FIRST_INTERVAL[rating];
+      saveSRSCard(listId, word.id, interval, DEFAULT_EASE, 1).catch(() => {});
+    }
+
     const cur = indexRef.current;
-    if (cur < DEMO_WORDS.length - 1) {
+    if (cur < words.length - 1) {
       setIndex(cur + 1);
       setIsFlipped(false);
       flipVal.value     = withTiming(0, { duration: 0 });
@@ -126,9 +107,8 @@ export default function FlashcardScreen() {
     } else {
       setDone(true);
     }
-  }, []);
+  }, [words, listId, word]);
 
-  // ── button rating ─────────────────────────────────────────────────────────
   const EXIT_CONFIG = { duration: 220, easing: Easing.out(Easing.cubic) };
 
   const rateButton = useCallback((rating: 'hard' | 'good' | 'easy') => {
@@ -139,7 +119,6 @@ export default function FlashcardScreen() {
     if (rating === 'good') tyCard.value = withTiming(exitY, EXIT_CONFIG);
   }, [advanceCard]);
 
-  // ── swipe gesture (active only when flipped) ──────────────────────────────
   const pan = Gesture.Pan()
     .onUpdate((e) => {
       'worklet';
@@ -153,7 +132,7 @@ export default function FlashcardScreen() {
       if (isFlippedSV.value === 0) { txCard.value = withSpring(0); return; }
       const exitCfg = { duration: 220, easing: Easing.out(Easing.cubic) };
       if (e.translationX > SWIPE_THRESHOLD) {
-        tiltCard.value = withTiming(14, { duration: 80 });
+        tiltCard.value = withTiming(14,  { duration: 80 });
         txCard.value   = withTiming(SCREEN_W + 200, exitCfg, () => { runOnJS(advanceCard)('easy'); });
       } else if (e.translationX < -SWIPE_THRESHOLD) {
         tiltCard.value = withTiming(-14, { duration: 80 });
@@ -167,68 +146,51 @@ export default function FlashcardScreen() {
       }
     });
 
-  // ── animated styles ───────────────────────────────────────────────────────
   const cardMotion = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: txCard.value },
-      { translateY: tyCard.value },
-      { rotate: `${tiltCard.value}deg` },
-    ],
+    transform: [{ translateX: txCard.value }, { translateY: tyCard.value }, { rotate: `${tiltCard.value}deg` }],
   }));
-
   const frontFace = useAnimatedStyle(() => ({
     transform: [{ perspective: 1400 }, { rotateY: `${interpolate(flipVal.value, [0, 1], [0, 180])}deg` }],
     backfaceVisibility: 'hidden',
     opacity: interpolate(flipVal.value, [0, 0.38, 0.45, 1], [1, 1, 0, 0]),
   }));
-
   const backFace = useAnimatedStyle(() => ({
     transform: [{ perspective: 1400 }, { rotateY: `${interpolate(flipVal.value, [0, 1], [180, 360])}deg` }],
     backfaceVisibility: 'hidden',
     opacity: interpolate(flipVal.value, [0, 0.45, 0.52, 1], [0, 0, 1, 1]),
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
   }));
-
-  const easyOverlay = useAnimatedStyle(() => ({
-    opacity: interpolate(txCard.value, [0, SWIPE_THRESHOLD], [0, 1], Extrapolation.CLAMP),
-  }));
-  const hardOverlay = useAnimatedStyle(() => ({
-    opacity: interpolate(txCard.value, [-SWIPE_THRESHOLD, 0], [1, 0], Extrapolation.CLAMP),
-  }));
-  const goodOverlay = useAnimatedStyle(() => ({
-    opacity: interpolate(tyCard.value, [-SWIPE_THRESHOLD, 0], [1, 0], Extrapolation.CLAMP),
-  }));
-
-  // Next card scales up as current card moves away
+  const easyOverlay = useAnimatedStyle(() => ({ opacity: interpolate(txCard.value, [0, SWIPE_THRESHOLD], [0, 1], Extrapolation.CLAMP) }));
+  const hardOverlay = useAnimatedStyle(() => ({ opacity: interpolate(txCard.value, [-SWIPE_THRESHOLD, 0], [1, 0], Extrapolation.CLAMP) }));
+  const goodOverlay = useAnimatedStyle(() => ({ opacity: interpolate(tyCard.value, [-SWIPE_THRESHOLD, 0], [1, 0], Extrapolation.CLAMP) }));
   const nextCardAnim = useAnimatedStyle(() => {
     const dist  = Math.sqrt(txCard.value ** 2 + tyCard.value ** 2);
-    const scale = interpolate(dist, [0, SWIPE_THRESHOLD * 1.4], [0.93, 1], Extrapolation.CLAMP);
-    const op    = interpolate(dist, [0, SWIPE_THRESHOLD], [0.55, 0.9], Extrapolation.CLAMP);
-    return { transform: [{ scale }], opacity: op };
+    return { transform: [{ scale: interpolate(dist, [0, SWIPE_THRESHOLD * 1.4], [0.93, 1], Extrapolation.CLAMP) }], opacity: interpolate(dist, [0, SWIPE_THRESHOLD], [0.55, 0.9], Extrapolation.CLAMP) };
   });
-
   const stackCardAnim = useAnimatedStyle(() => {
     const dist  = Math.sqrt(txCard.value ** 2 + tyCard.value ** 2);
-    const scale = interpolate(dist, [0, SWIPE_THRESHOLD * 1.4], [0.86, 0.93], Extrapolation.CLAMP);
-    const op    = interpolate(dist, [0, SWIPE_THRESHOLD], [0.3, 0.55], Extrapolation.CLAMP);
-    return { transform: [{ scale }], opacity: op };
+    return { transform: [{ scale: interpolate(dist, [0, SWIPE_THRESHOLD * 1.4], [0.86, 0.93], Extrapolation.CLAMP) }], opacity: interpolate(dist, [0, SWIPE_THRESHOLD], [0.3, 0.55], Extrapolation.CLAMP) };
   });
 
-  // ── card faces (shared markup) ────────────────────────────────────────────
+  if (loading || !word) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: Colors.textMuted }}>Yükleniyor…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const cardFaces = (
     <View style={styles.cardWrapper}>
-      {/* FRONT */}
       <Animated.View style={[styles.card, frontFace]}>
         <View style={[styles.cardTop, { backgroundColor: accentColor }]}>
           <View style={styles.typePill}>
             <Text style={styles.typeText}>{TYPE_LABELS[word.type] ?? word.type}</Text>
           </View>
           <Text style={styles.wordText}>{word.word}</Text>
-          <TouchableOpacity
-            style={styles.listenBtn}
-            onPress={() => Speech.speak(word.word, { language: 'en-US', rate: 0.85 })}
-            activeOpacity={0.75}
-          >
+          <TouchableOpacity style={styles.listenBtn} onPress={() => Speech.speak(word.word, { language: 'en-US', rate: 0.85 })} activeOpacity={0.75}>
             <SymbolView name="speaker.wave.2.fill" size={14} tintColor="rgba(255,255,255,0.9)" type="monochrome" />
             <Text style={styles.listenText}>Dinle</Text>
           </TouchableOpacity>
@@ -239,56 +201,45 @@ export default function FlashcardScreen() {
         </View>
       </Animated.View>
 
-      {/* BACK */}
       <Animated.View style={[styles.card, backFace]}>
         <View style={[styles.cardBackStrip, { backgroundColor: accentColor }]} />
         <View style={styles.cardBackContent}>
           <View style={styles.backBlock}>
             <Text style={[styles.backLabel, { color: accentColor }]}>Tanım</Text>
-            <Text style={styles.backDef}>{word.definitionTr}</Text>
+            <Text style={styles.backDef}>{word.def}</Text>
           </View>
           <View style={styles.backDivider} />
           <View style={[styles.backBlock, styles.exampleBlock]}>
             <Text style={[styles.backLabel, { color: accentColor }]}>Örnek Cümle</Text>
-            <Text style={styles.exampleEn}>"{word.exampleSentence}"</Text>
-            <Text style={styles.exampleTr}>{word.exampleSentenceTr}</Text>
+            <Text style={styles.exampleEn}>"{word.example}"</Text>
+            <Text style={styles.exampleTr}>{word.exampleTr}</Text>
           </View>
           <View style={styles.backDivider} />
           <View style={styles.backBlock}>
             <Text style={[styles.backLabel, { color: accentColor }]}>Türkçe</Text>
-            <Text style={[styles.translationText, { color: accentColor }]}>{word.turkishTranslation}</Text>
+            <Text style={[styles.translationText, { color: accentColor }]}>{word.tr}</Text>
           </View>
         </View>
-
-        {/* Swipe overlays */}
-        <Animated.View style={[styles.swipeOverlay, styles.easyOverlay, easyOverlay]}>
-          <Text style={styles.swipeOverlayText}>Kolay</Text>
-        </Animated.View>
-        <Animated.View style={[styles.swipeOverlay, styles.hardOverlay, hardOverlay]}>
-          <Text style={styles.swipeOverlayText}>Zor</Text>
-        </Animated.View>
-        <Animated.View style={[styles.swipeOverlay, styles.goodOverlay, goodOverlay]}>
-          <Text style={styles.swipeOverlayText}>İyi</Text>
-        </Animated.View>
+        <Animated.View style={[styles.swipeOverlay, styles.easyOverlay, easyOverlay]}><Text style={styles.swipeOverlayText}>Kolay</Text></Animated.View>
+        <Animated.View style={[styles.swipeOverlay, styles.hardOverlay, hardOverlay]}><Text style={styles.swipeOverlayText}>Zor</Text></Animated.View>
+        <Animated.View style={[styles.swipeOverlay, styles.goodOverlay, goodOverlay]}><Text style={styles.swipeOverlayText}>İyi</Text></Animated.View>
       </Animated.View>
     </View>
   );
 
-  // ── done screen ───────────────────────────────────────────────────────────
   if (done) {
-    const total = DEMO_WORDS.length;
+    const total = words.length;
     const xp    = good * 5 + easy * 10;
-    const acc   = Math.round(((good + easy) / total) * 100);
+    const acc   = total > 0 ? Math.round(((good + easy) / total) * 100) : 0;
+    if (!sessionSaved.current) {
+      sessionSaved.current = true;
+      recordSession(good + easy, total, xp).catch(() => {});
+    }
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.doneContent}>
           <View style={[styles.doneIconWrap, { backgroundColor: acc >= 80 ? Colors.warningLight : Colors.primaryLight }]}>
-            <SymbolView
-              name={acc >= 80 ? 'trophy.fill' : acc >= 60 ? 'star.fill' : 'hand.thumbsup.fill'}
-              size={38}
-              tintColor={acc >= 80 ? Colors.warning : Colors.primary}
-              type="monochrome"
-            />
+            <SymbolView name={acc >= 80 ? 'trophy.fill' : acc >= 60 ? 'star.fill' : 'hand.thumbsup.fill'} size={38} tintColor={acc >= 80 ? Colors.warning : Colors.primary} type="monochrome" />
           </View>
           <Text style={styles.doneTitle}>Oturum Tamamlandı</Text>
           <Text style={styles.doneAcc}>{acc}% doğruluk</Text>
@@ -315,11 +266,7 @@ export default function FlashcardScreen() {
           <TouchableOpacity style={styles.doneBtn} onPress={() => router.replace('/(tabs)')} activeOpacity={0.88}>
             <Text style={styles.doneBtnText}>Ana Sayfaya Dön</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.againBtn}
-            onPress={() => { setIndex(0); setIsFlipped(false); setHard(0); setGood(0); setEasy(0); setDone(false); flipVal.value = 0; isFlippedSV.value = 0; }}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.againBtn} onPress={() => { sessionSaved.current = false; setIndex(0); setIsFlipped(false); setHard(0); setGood(0); setEasy(0); setDone(false); flipVal.value = 0; isFlippedSV.value = 0; }} activeOpacity={0.8}>
             <Text style={styles.againBtnText}>Tekrar Çalış</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -327,10 +274,8 @@ export default function FlashcardScreen() {
     );
   }
 
-  // ── main screen ───────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backBtn} activeOpacity={0.7}>
           <SymbolView name="xmark" size={15} tintColor={Colors.textSecondary} type="monochrome" />
@@ -340,43 +285,30 @@ export default function FlashcardScreen() {
             <Animated.View style={[styles.progressFill, { width: `${progress * 100}%` as any, backgroundColor: accentColor }]} />
           </View>
         </View>
-        <Text style={styles.progressText}>{index + 1} / {DEMO_WORDS.length}</Text>
+        <Text style={styles.progressText}>{index + 1} / {words.length}</Text>
       </View>
 
-      {/* Card Stack Area */}
       <View style={styles.cardArea}>
-        {/* Stack card 2 (deepest) */}
-        {index + 2 < DEMO_WORDS.length && (
+        {index + 2 < words.length && (
           <Animated.View style={[styles.stackBase, stackCardAnim, { top: 24 }]}>
             <View style={[styles.card, styles.stackCard, { borderTopColor: WORD_COLORS[(index + 2) % WORD_COLORS.length] }]} />
           </Animated.View>
         )}
-        {/* Stack card 1 */}
-        {index + 1 < DEMO_WORDS.length && (
+        {index + 1 < words.length && (
           <Animated.View style={[styles.stackBase, nextCardAnim, { top: 12 }]}>
             <View style={[styles.card, styles.stackCard, { borderTopColor: nextColor }]} />
           </Animated.View>
         )}
 
-        {/* Active card */}
         {isFlipped ? (
           <GestureDetector gesture={pan}>
-            <Animated.View style={[styles.stackBase, cardMotion, { top: 0 }]}>
-              {cardFaces}
-            </Animated.View>
+            <Animated.View style={[styles.stackBase, cardMotion, { top: 0 }]}>{cardFaces}</Animated.View>
           </GestureDetector>
         ) : (
-          <TouchableOpacity
-            style={[styles.stackBase, { top: 0 }]}
-            onPress={flipCard}
-            activeOpacity={0.97}
-          >
-            {cardFaces}
-          </TouchableOpacity>
+          <TouchableOpacity style={[styles.stackBase, { top: 0 }]} onPress={flipCard} activeOpacity={0.97}>{cardFaces}</TouchableOpacity>
         )}
       </View>
 
-      {/* Rating Area */}
       <View style={styles.ratingArea}>
         {isFlipped ? (
           <>
@@ -386,8 +318,8 @@ export default function FlashcardScreen() {
               <Text style={styles.swipeHint}>Kolay →</Text>
             </View>
             <View style={styles.ratingRow}>
-              <RatingBtn label="Zor" sub="← kaydır" color={Colors.hard} bg={Colors.hardBg} onPress={() => rateButton('hard')} />
-              <RatingBtn label="İyi" sub="↑ kaydır" color={Colors.good} bg={Colors.goodBg} onPress={() => rateButton('good')} />
+              <RatingBtn label="Zor"   sub="← kaydır" color={Colors.hard} bg={Colors.hardBg} onPress={() => rateButton('hard')} />
+              <RatingBtn label="İyi"   sub="↑ kaydır" color={Colors.good} bg={Colors.goodBg} onPress={() => rateButton('good')} />
               <RatingBtn label="Kolay" sub="→ kaydır" color={Colors.easy} bg={Colors.easyBg} onPress={() => rateButton('easy')} />
             </View>
           </>
@@ -405,38 +337,17 @@ const CARD_RADIUS = 24;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
-
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 12 },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
   progressWrap: { flex: 1 },
   progressTrack: { height: 8, backgroundColor: Colors.borderLight, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4 },
   progressText: { color: Colors.textMuted, fontSize: 13, fontWeight: '600', minWidth: 42, textAlign: 'right' },
-
   cardArea: { flex: 1, paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center' },
   stackBase: { position: 'absolute', left: 20, right: 20 },
-
   cardWrapper: { width: '100%' },
-  card: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: CARD_RADIUS,
-    minHeight: 340,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 10,
-  },
-  stackCard: {
-    minHeight: 340,
-    borderTopWidth: 5,
-    borderLeftWidth: 0,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-
-  // Card Front
+  card: { backgroundColor: Colors.bgCard, borderRadius: CARD_RADIUS, minHeight: 340, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 24, elevation: 10 },
+  stackCard: { minHeight: 340, borderTopWidth: 5, borderLeftWidth: 0, borderRightWidth: 0, borderBottomWidth: 0 },
   cardTop: { paddingTop: 32, paddingBottom: 28, paddingHorizontal: 28, alignItems: 'center', gap: 14 },
   typePill: { backgroundColor: 'rgba(255,255,255,0.22)', paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20 },
   typeText: { color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
@@ -446,8 +357,6 @@ const styles = StyleSheet.create({
   cardBottom: { paddingVertical: 20, alignItems: 'center', gap: 12 },
   tapHint: { color: Colors.textMuted, fontSize: 12, letterSpacing: 0.3 },
   tapHintLine: { width: 40, height: 3, borderRadius: 2 },
-
-  // Card Back
   cardBackStrip: { height: 5 },
   cardBackContent: { padding: 24, gap: 0 },
   backBlock: { paddingVertical: 12 },
@@ -458,15 +367,11 @@ const styles = StyleSheet.create({
   exampleEn: { color: Colors.textSecondary, fontSize: 13, fontStyle: 'italic', lineHeight: 20 },
   exampleTr: { color: Colors.textMuted, fontSize: 12, marginTop: 4 },
   translationText: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
-
-  // Swipe overlays
   swipeOverlay: { position: 'absolute', top: 16, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
   easyOverlay: { right: 16, backgroundColor: Colors.easyBg, borderWidth: 1.5, borderColor: Colors.easy + '60' },
   hardOverlay: { left: 16, backgroundColor: Colors.hardBg, borderWidth: 1.5, borderColor: Colors.hard + '60' },
   goodOverlay: { alignSelf: 'center', left: '35%', backgroundColor: Colors.goodBg, borderWidth: 1.5, borderColor: Colors.good + '60' },
   swipeOverlayText: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
-
-  // Rating
   ratingArea: { paddingHorizontal: 20, paddingBottom: 16, paddingTop: 8, gap: 8 },
   swipeHints: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 },
   swipeHint: { color: Colors.textMuted, fontSize: 11, fontWeight: '500' },
@@ -476,8 +381,6 @@ const styles = StyleSheet.create({
   ratingSub: { fontSize: 10, fontWeight: '500' },
   showBtn: { borderRadius: 18, paddingVertical: 18, alignItems: 'center', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6 },
   showBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-
-  // Done screen
   doneContent: { padding: 24, alignItems: 'center', gap: 16, paddingBottom: 40 },
   doneIconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginTop: 32, marginBottom: 4 },
   doneTitle: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
@@ -496,6 +399,4 @@ const styles = StyleSheet.create({
   doneBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   againBtn: { width: '100%', backgroundColor: Colors.bgCard, borderRadius: 16, paddingVertical: 16, alignItems: 'center', borderWidth: 1.5, borderColor: Colors.border },
   againBtnText: { color: Colors.textSecondary, fontWeight: '700', fontSize: 15 },
-
-  warningLight: { backgroundColor: Colors.warningLight },
 });
