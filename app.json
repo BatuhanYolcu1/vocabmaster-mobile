@@ -58,6 +58,7 @@
         }
       ]
     ],
+    "privacy": "https://batuhanyolcu1.github.io/vocabmaster-mobile/privacy.html",
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
