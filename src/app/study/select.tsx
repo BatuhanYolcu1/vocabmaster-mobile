@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
 import { Colors } from '../../constants/colors';
 import { DEFAULT_LISTS } from '../../data/demoWords';
+import { countDueWords } from '../../lib/stats';
 
 type ListItem = { id: string; name: string; count: number; color: string; symbol: string };
 
@@ -40,7 +41,7 @@ const MODES = [
   {
     id: 'speaking',
     name: 'Konuşma',
-    desc: 'Söyle ve kontrol et',
+    desc: 'Sesli söyle, kendini değerlendir',
     symbol: 'mic.fill',
     color: '#EC4899',
     bg: '#FDF2F8',
@@ -52,6 +53,7 @@ export default function StudySelectScreen() {
   const [step, setStep] = useState<'list' | 'mode'>('list');
   const [selectedList, setSelectedList] = useState<string | null>(null);
   const [lists, setLists] = useState<ListItem[]>([]);
+  const [dueCount, setDueCount] = useState(0);
 
   useFocusEffect(useCallback(() => {
     setStep('list');
@@ -70,6 +72,7 @@ export default function StudySelectScreen() {
         })
       );
       setLists([...defaults, ...customItems]);
+      setDueCount(await countDueWords());
     }
     loadLists();
   }, []));
@@ -109,6 +112,22 @@ export default function StudySelectScreen() {
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         {step === 'list' ? (
           <>
+            {dueCount > 0 && (
+              <TouchableOpacity
+                style={s.dueCard}
+                onPress={() => { setSelectedList('_due'); setStep('mode'); }}
+                activeOpacity={0.85}
+              >
+                <View style={s.dueIcon}>
+                  <SymbolView name="clock.arrow.circlepath" size={20} tintColor={Colors.warning} type="monochrome" />
+                </View>
+                <View style={s.listInfo}>
+                  <Text style={s.dueName}>Tekrar Bekleyenler</Text>
+                  <Text style={s.dueCountText}>{dueCount} kelime tekrar zamanı geldi</Text>
+                </View>
+                <SymbolView name="chevron.right" size={14} tintColor={Colors.warning} type="monochrome" />
+              </TouchableOpacity>
+            )}
             <Text style={s.sectionLabel}>Hangi listeden çalışacaksın?</Text>
             {lists.map((list) => (
               <TouchableOpacity
@@ -211,6 +230,28 @@ const s = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+
+  dueCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: Colors.warningLight,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.warning + '50',
+    marginBottom: 6,
+  },
+  dueIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    backgroundColor: Colors.warning + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dueName: { color: Colors.textPrimary, fontSize: 15, fontWeight: '800', marginBottom: 3 },
+  dueCountText: { color: Colors.warning, fontSize: 12, fontWeight: '600' },
   listIcon: {
     width: 46,
     height: 46,

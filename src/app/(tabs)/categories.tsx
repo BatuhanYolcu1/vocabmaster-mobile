@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,11 +30,64 @@ export default function CategoriesScreen() {
   const loadLists = useCallback(async () => {
     const raw = await AsyncStorage.getItem('custom_lists');
     const custom: ListItem[] = raw ? JSON.parse(raw) : [];
-    setLists([...DEFAULT_LISTS, ...custom]);
+    // Gerçek kelime sayıları: default sayısı + words_{id}'deki kullanıcı kelimeleri
+    const all = await Promise.all([...DEFAULT_LISTS, ...custom].map(async (l) => {
+      const wr = await AsyncStorage.getItem(`words_${l.id}`);
+      const extra = wr ? (JSON.parse(wr) as unknown[]).length : 0;
+      const base = DEFAULT_LISTS.find(d => d.id === l.id)?.count ?? 0;
+      return { ...l, count: base + extra };
+    }));
+    setLists(all);
   }, []);
 
   // Refresh every time the screen comes into focus (e.g. after creating a new list)
   useFocusEffect(useCallback(() => { loadLists(); }, [loadLists]));
+
+  const isDefault = (id: string) => DEFAULT_LISTS.some(d => d.id === id);
+
+  const deleteList = useCallback((list: ListItem) => {
+    Alert.alert('Listeyi Sil', `"${list.name}" ve içindeki tüm kelimeler kalıcı olarak silinecek.`, [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Sil', style: 'destructive',
+        onPress: async () => {
+          const raw = await AsyncStorage.getItem('custom_lists');
+          const custom: ListItem[] = raw ? JSON.parse(raw) : [];
+          await AsyncStorage.setItem('custom_lists', JSON.stringify(custom.filter(l => l.id !== list.id)));
+          await AsyncStorage.multiRemove([`words_${list.id}`, `srs_${list.id}`]);
+          loadLists();
+        },
+      },
+    ]);
+  }, [loadLists]);
+
+  const renameList = useCallback((list: ListItem) => {
+    Alert.prompt('Listeyi Yeniden Adlandır', undefined, [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Kaydet',
+        onPress: async (newName?: string) => {
+          const trimmed = newName?.trim();
+          if (!trimmed) return;
+          const raw = await AsyncStorage.getItem('custom_lists');
+          const custom: ListItem[] = raw ? JSON.parse(raw) : [];
+          await AsyncStorage.setItem('custom_lists', JSON.stringify(
+            custom.map(l => (l.id === list.id ? { ...l, name: trimmed } : l)),
+          ));
+          loadLists();
+        },
+      },
+    ], 'plain-text', list.name);
+  }, [loadLists]);
+
+  const handleLongPress = useCallback((list: ListItem) => {
+    if (isDefault(list.id)) return;
+    Alert.alert(list.name, 'Ne yapmak istersiniz?', [
+      { text: 'Yeniden Adlandır', onPress: () => renameList(list) },
+      { text: 'Sil', style: 'destructive', onPress: () => deleteList(list) },
+      { text: 'İptal', style: 'cancel' },
+    ]);
+  }, [renameList, deleteList]);
 
   const totalWords = lists.reduce((a, l) => a + (l.count || 0), 0);
 
@@ -64,6 +117,8 @@ export default function CategoriesScreen() {
             key={list.id}
             style={s.card}
             onPress={() => router.push({ pathname: '/words/[listId]' as any, params: { listId: list.id } })}
+            onLongPress={() => handleLongPress(list)}
+            delayLongPress={400}
             activeOpacity={0.8}
           >
             <View style={[s.iconBox, { backgroundColor: list.color + '18' }]}>

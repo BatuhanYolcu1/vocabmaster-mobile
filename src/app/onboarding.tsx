@@ -226,6 +226,7 @@ export default function OnboardingScreen() {
                 returnKeyType="done"
                 onSubmitEditing={finish}
               />
+              <Text style={s.nameHint}>Hedefini ve ismini daha sonra profilden değiştirebilirsin.</Text>
             </View>
           </View>
         )}
@@ -282,6 +283,7 @@ const s = StyleSheet.create({
   nameLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
   nameInput: { fontSize: 15, color: Colors.textPrimary, paddingVertical: 13, paddingHorizontal: 16, backgroundColor: Colors.bgCard, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.border },
   nameInputFilled: { borderColor: Colors.primarySoft, backgroundColor: Colors.primaryLight + '50' },
+  nameHint: { fontSize: 11, color: Colors.textMuted, textAlign: 'center', marginTop: 2 },
 
   bottom: { paddingHorizontal: 28, paddingBottom: 20, paddingTop: 12 },
   nextBtn: { borderRadius: 18, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6 },

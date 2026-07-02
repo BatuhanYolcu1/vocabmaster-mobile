@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -76,7 +76,10 @@ export default function NotificationsScreen() {
         Alert.alert(
           'İzin Gerekli',
           'Bildirimler için uygulama ayarlarından izin vermen gerekiyor.',
-          [{ text: 'Tamam' }],
+          [
+            { text: 'Vazgeç', style: 'cancel' },
+            { text: 'Ayarları Aç', onPress: () => Linking.openSettings() },
+          ],
         );
         return;
       }

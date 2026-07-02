@@ -28,6 +28,8 @@ export default function RootLayout() {
         <Stack.Screen name="words/add" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="words/new-list" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings/notifications" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="settings/privacy" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="settings/help" options={{ animation: 'slide_from_right' }} />
       </Stack>
     </GestureHandlerRootView>
   );

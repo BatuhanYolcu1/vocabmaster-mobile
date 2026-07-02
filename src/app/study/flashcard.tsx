@@ -15,6 +15,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Colors } from '../../constants/colors';
 import { loadStudyWords, StudyWord } from '../../data/demoWords';
 import { recordSession, saveSRSCard } from '../../lib/stats';
+import { StudyEmpty } from '../../components/study-empty';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 75;
@@ -40,7 +41,7 @@ function RatingBtn({ label, sub, color, bg, onPress }: { label: string; sub: str
 }
 
 export default function FlashcardScreen() {
-  const { listId } = useLocalSearchParams<{ listId?: string }>();
+  const { listId, wordId } = useLocalSearchParams<{ listId?: string; wordId?: string }>();
   const [words, setWords] = useState<StudyWord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,8 +63,11 @@ export default function FlashcardScreen() {
   const isFlippedSV = useSharedValue(0);
 
   useEffect(() => {
-    loadStudyWords(listId).then(w => { setWords(w); setLoading(false); });
-  }, [listId]);
+    loadStudyWords(listId).then(w => {
+      setWords(wordId ? w.filter(x => x.id === wordId) : w);
+      setLoading(false);
+    });
+  }, [listId, wordId]);
 
   const word        = words[index];
   const accentColor = WORD_COLORS[index % WORD_COLORS.length];
@@ -89,10 +93,11 @@ export default function FlashcardScreen() {
       setEasy(e => e + 1);
     }
 
-    // Save SRS data for this card
-    if (listId && word) {
+    // Save SRS data for this card — tekrar modunda kelimenin asıl listesine yazılır
+    const srsListId = word?._listId ?? listId;
+    if (srsListId && srsListId !== '_due' && word) {
       const interval = FIRST_INTERVAL[rating];
-      saveSRSCard(listId, word.id, interval, DEFAULT_EASE, 1).catch(() => {});
+      saveSRSCard(srsListId, word.id, interval, DEFAULT_EASE, 1).catch(() => {});
     }
 
     const cur = indexRef.current;
@@ -171,6 +176,8 @@ export default function FlashcardScreen() {
     const dist  = Math.sqrt(txCard.value ** 2 + tyCard.value ** 2);
     return { transform: [{ scale: interpolate(dist, [0, SWIPE_THRESHOLD * 1.4], [0.86, 0.93], Extrapolation.CLAMP) }], opacity: interpolate(dist, [0, SWIPE_THRESHOLD], [0.3, 0.55], Extrapolation.CLAMP) };
   });
+
+  if (!loading && words.length === 0) return <StudyEmpty listId={listId} />;
 
   if (loading || !word) {
     return (

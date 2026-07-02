@@ -1,75 +1,25 @@
 import { useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
 import { Colors } from '../../constants/colors';
+import { DEFAULT_LISTS, StudyWord } from '../../data/demoWords';
+import { masteryFromSRS, loadSRSMap, SRSCard } from '../../lib/stats';
 
-// ─── Demo Data ─────────────────────────────────────────────────────────────────
-export type Word = {
-  id: string; word: string; tr: string; def: string;
-  example: string; exampleTr: string; type: string; mastery: number;
-};
-
-export const LIST_DATA: Record<string, { name: string; color: string; bg: string; symbol: string; words: Word[] }> = {
-  '1': {
-    name: 'B1 Temel Kelimeler', color: Colors.primary, bg: Colors.primaryLight, symbol: 'book.fill',
-    words: [
-      { id: '1', word: 'Eloquent',    tr: 'Belagatlı',     def: 'Güzel ve etkili konuşma yeteneğine sahip', example: 'She gave an eloquent speech.', exampleTr: 'Belagatlı bir konuşma yaptı.', type: 'adjective', mastery: 3 },
-      { id: '2', word: 'Serendipity', tr: 'Güzel tesadüf', def: 'Şans eseri yapılan güzel bir keşif', example: 'Finding that book was pure serendipity.', exampleTr: 'O kitabı bulmak saf bir tesadüftü.', type: 'noun', mastery: 1 },
-      { id: '3', word: 'Resilient',   tr: 'Dayanıklı',     def: 'Zorluklardan çabuk toparlanabilen', example: 'Children are remarkably resilient.', exampleTr: 'Çocuklar inanılmaz derecede dayanıklıdır.', type: 'adjective', mastery: 4 },
-      { id: '4', word: 'Ephemeral',   tr: 'Geçici',        def: 'Çok kısa süren, geçici olan', example: 'Fame can be ephemeral.', exampleTr: 'Şöhret geçici olabilir.', type: 'adjective', mastery: 2 },
-      { id: '5', word: 'Meticulous',  tr: 'Titiz',         def: 'Her detaya özen gösteren', example: 'She is meticulous in her work.', exampleTr: 'İşinde çok titizdir.', type: 'adjective', mastery: 0 },
-      { id: '6', word: 'Ambiguous',   tr: 'Belirsiz',      def: 'Birden fazla anlama gelebilen', example: 'The message was ambiguous.', exampleTr: 'Mesaj belirsizdi.', type: 'adjective', mastery: 2 },
-      { id: '7', word: 'Diligent',    tr: 'Çalışkan',      def: 'İşine özen ve gayret gösteren', example: 'He is a diligent student.', exampleTr: 'Çalışkan bir öğrencidir.', type: 'adjective', mastery: 4 },
-      { id: '8', word: 'Tenacious',   tr: 'Azimli',        def: 'Hedefinden vazgeçmeyen, ısrarcı', example: 'She is tenacious in her goals.', exampleTr: 'Hedeflerinde azimlidir.', type: 'adjective', mastery: 1 },
-      { id: '9', word: 'Benevolent',  tr: 'Hayırsever',    def: 'İyilik yapmaktan hoşlanan', example: 'A benevolent donation.', exampleTr: 'Hayırsever bir bağış.', type: 'adjective', mastery: 0 },
-      { id: '10', word: 'Candid',     tr: 'Dürüst',        def: 'Açık sözlü, samimi', example: 'Please be candid with me.', exampleTr: 'Lütfen benimle dürüst ol.', type: 'adjective', mastery: 3 },
-    ],
-  },
-  '2': {
-    name: 'İş İngilizcesi', color: Colors.green, bg: Colors.greenLight, symbol: 'briefcase.fill',
-    words: [
-      { id: '1', word: 'Leverage',    tr: 'Kaldıraç etkisi', def: 'Bir avantajı en iyi şekilde kullanmak', example: 'We can leverage our network.', exampleTr: 'Ağımızı kullanabiliriz.', type: 'noun', mastery: 2 },
-      { id: '2', word: 'Streamline',  tr: 'Sadeleştirmek',   def: 'Süreci daha verimli hale getirmek', example: 'We need to streamline our process.', exampleTr: 'Sürecimizi sadeleştirmeliyiz.', type: 'verb', mastery: 1 },
-      { id: '3', word: 'Synergy',     tr: 'Sinerji',         def: 'İki unsurun birlikte daha güçlü olması', example: 'There is great synergy in this team.', exampleTr: 'Bu ekipte büyük sinerji var.', type: 'noun', mastery: 3 },
-      { id: '4', word: 'Delegate',    tr: 'Yetki devretmek', def: 'Görevi başka birine aktarmak', example: 'A good manager knows how to delegate.', exampleTr: 'İyi bir yönetici nasıl yetki devredeceğini bilir.', type: 'verb', mastery: 4 },
-      { id: '5', word: 'Milestone',   tr: 'Kilometre taşı',  def: 'Projedeki önemli başarı noktası', example: 'We reached a major milestone.', exampleTr: 'Büyük bir kilometre taşına ulaştık.', type: 'noun', mastery: 2 },
-    ],
-  },
-  '3': {
-    name: 'Akademik Kelimeler', color: Colors.purple, bg: Colors.purpleLight, symbol: 'graduationcap.fill',
-    words: [
-      { id: '1', word: 'Hypothesis',  tr: 'Hipotez',     def: 'Kanıtlanmayı bekleyen önerme', example: 'The hypothesis was confirmed.', exampleTr: 'Hipotez doğrulandı.', type: 'noun', mastery: 3 },
-      { id: '2', word: 'Empirical',   tr: 'Ampirik',     def: 'Gözlem ve deneyime dayalı', example: 'Empirical evidence is crucial.', exampleTr: 'Ampirik kanıt çok önemlidir.', type: 'adjective', mastery: 1 },
-      { id: '3', word: 'Paradigm',    tr: 'Paradigma',   def: 'Düşünce veya araştırmada temel model', example: 'A paradigm shift in science.', exampleTr: 'Bilimde bir paradigma değişimi.', type: 'noun', mastery: 0 },
-      { id: '4', word: 'Synthesis',   tr: 'Sentez',      def: 'Farklı unsurları birleştirme', example: 'A synthesis of ideas.', exampleTr: 'Fikirlerin sentezi.', type: 'noun', mastery: 2 },
-    ],
-  },
-  '4': {
-    name: 'Seyahat', color: Colors.accent, bg: Colors.accentLight, symbol: 'airplane',
-    words: [
-      { id: '1', word: 'Itinerary',     tr: 'Seyahat planı', def: 'Gezi için hazırlanmış detaylı plan', example: 'Check the itinerary.', exampleTr: 'Seyahat planına bak.', type: 'noun', mastery: 2 },
-      { id: '2', word: 'Accommodation', tr: 'Konaklama',     def: 'Seyahatte kalınacak yer', example: 'Book your accommodation early.', exampleTr: 'Konaklamayı erken ayırın.', type: 'noun', mastery: 4 },
-      { id: '3', word: 'Departure',     tr: 'Kalkış',        def: 'Bir yerden ayrılma, kalkış', example: 'Check the departure time.', exampleTr: 'Kalkış saatini kontrol edin.', type: 'noun', mastery: 3 },
-    ],
-  },
-};
+export type Word = StudyWord & { mastery: number };
 
 const MASTERY_COLORS = ['#D1D5DB', Colors.accent, '#FBBF24', '#86EFAC', Colors.easy];
-const MASTERY_LABELS = ['Yeni', 'Öğreniliyor', 'Tanıdık', 'İyi', 'Öğrenildi'];
 
 function MasteryDots({ level }: { level: number }) {
+  const lv = Math.min(Math.max(level, 0), 4);
   return (
     <View style={md.row}>
       {Array.from({ length: 4 }).map((_, i) => (
-        <View
-          key={i}
-          style={[md.dot, { backgroundColor: i < level ? MASTERY_COLORS[level] : Colors.borderLight }]}
-        />
+        <View key={i} style={[md.dot, { backgroundColor: i < lv ? MASTERY_COLORS[lv] : Colors.borderLight }]} />
       ))}
     </View>
   );
@@ -80,35 +30,41 @@ const md = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4 },
 });
 
-// ─── Screen ────────────────────────────────────────────────────────────────────
 export default function WordListScreen() {
   const { listId } = useLocalSearchParams<{ listId: string }>();
-  const staticList = LIST_DATA[listId ?? ''];
+  const defaultList = DEFAULT_LISTS.find(l => l.id === listId);
   const [query,       setQuery]       = useState('');
   const [customWords, setCustomWords] = useState<Word[]>([]);
   const [customList,  setCustomList]  = useState<{ name: string; color: string; bg: string; symbol: string } | null>(null);
+  const [srsMap,      setSrsMap]      = useState<Record<string, SRSCard>>({});
 
-  // Load custom words from AsyncStorage every time screen is focused
   useFocusEffect(useCallback(() => {
     (async () => {
-      // Custom words added to any list
-      const raw = await AsyncStorage.getItem(`words_${listId}`);
+      const [raw, srs] = await Promise.all([
+        AsyncStorage.getItem(`words_${listId}`),
+        loadSRSMap(listId ?? ''),
+      ]);
       setCustomWords(raw ? JSON.parse(raw) : []);
-
-      // If this is a user-created list (not in LIST_DATA), load its metadata
-      if (!staticList) {
+      setSrsMap(srs);
+      if (!defaultList) {
         const listsRaw = await AsyncStorage.getItem('custom_lists');
         const lists = listsRaw ? JSON.parse(listsRaw) : [];
         const found = lists.find((l: any) => l.id === listId);
         if (found) setCustomList({ name: found.name, color: found.color, bg: found.color + '18', symbol: found.symbol });
       }
     })();
-  }, [listId, staticList]));
+  }, [listId, defaultList]));
 
-  const list = staticList
-    ? { ...staticList, words: [...staticList.words, ...customWords] }
+  // Mastery gerçek SRS verisinden türetilir
+  const withMastery = useCallback(
+    (ws: StudyWord[]): Word[] => ws.map(w => ({ ...w, mastery: masteryFromSRS(srsMap[w.id]) })),
+    [srsMap],
+  );
+
+  const list = defaultList
+    ? { name: defaultList.name, color: defaultList.color, bg: defaultList.bg, symbol: defaultList.symbol, words: [...withMastery(defaultList.words), ...withMastery(customWords)] }
     : customList
-      ? { ...customList, words: customWords }
+      ? { ...customList, words: withMastery(customWords) }
       : null;
 
   const filtered = useMemo(() => {
@@ -118,6 +74,31 @@ export default function WordListScreen() {
     return all.filter(w => w.word.toLowerCase().includes(q) || w.tr.toLowerCase().includes(q));
   }, [query, list]);
 
+  const customWordIds = useMemo(() => new Set(customWords.map(w => w.id)), [customWords]);
+
+  const confirmDelete = (wordId: string, wordName: string) => {
+    Alert.alert('Kelimeyi Sil', `"${wordName}" kalıcı olarak silinecek.`, [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Sil', style: 'destructive',
+        onPress: async () => {
+          const updated = customWords.filter(w => w.id !== wordId);
+          await AsyncStorage.setItem(`words_${listId}`, JSON.stringify(updated));
+          setCustomWords(updated);
+        },
+      },
+    ]);
+  };
+
+  const handleLongPress = (item: Word) => {
+    if (!customWordIds.has(item.id)) return;
+    Alert.alert(item.word, 'Ne yapmak istersiniz?', [
+      { text: 'Düzenle', onPress: () => router.push({ pathname: '/words/add' as any, params: { listId, wordId: item.id } }) },
+      { text: 'Sil', style: 'destructive', onPress: () => confirmDelete(item.id, item.word) },
+      { text: 'İptal', style: 'cancel' },
+    ]);
+  };
+
   if (!list) return null;
 
   const mastered = list.words.filter(w => w.mastery === 4).length;
@@ -126,7 +107,6 @@ export default function WordListScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} activeOpacity={0.7}>
           <SymbolView name="chevron.left" size={16} tintColor={Colors.primary} type="monochrome" />
@@ -145,7 +125,6 @@ export default function WordListScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Stats strip */}
       <View style={s.statsStrip}>
         {[
           { label: 'Öğrenildi', count: mastered, color: Colors.easy },
@@ -159,7 +138,6 @@ export default function WordListScreen() {
         ))}
       </View>
 
-      {/* Search */}
       <View style={s.searchWrap}>
         <SymbolView name="magnifyingglass" size={15} tintColor={Colors.textMuted} type="monochrome" style={s.searchIcon} />
         <TextInput
@@ -173,7 +151,6 @@ export default function WordListScreen() {
         />
       </View>
 
-      {/* Word List */}
       <FlatList
         data={filtered}
         keyExtractor={item => item.id}
@@ -184,6 +161,8 @@ export default function WordListScreen() {
           <TouchableOpacity
             style={s.wordCard}
             onPress={() => router.push({ pathname: '/words/detail' as any, params: { listId, wordId: item.id } })}
+            onLongPress={() => handleLongPress(item)}
+            delayLongPress={400}
             activeOpacity={0.75}
           >
             <View style={s.wordLeft}>
@@ -197,6 +176,9 @@ export default function WordListScreen() {
                 </Text>
               </View>
               <MasteryDots level={item.mastery} />
+              {customWordIds.has(item.id) && (
+                <View style={s.customDot} />
+              )}
             </View>
           </TouchableOpacity>
         )}
@@ -208,7 +190,6 @@ export default function WordListScreen() {
         }
       />
 
-      {/* FAB */}
       <TouchableOpacity
         style={[s.fab, { backgroundColor: list.color }]}
         onPress={() => router.push({ pathname: '/words/add' as any, params: { listId } })}
@@ -249,6 +230,7 @@ const s = StyleSheet.create({
   wordRight: { alignItems: 'flex-end', gap: 8 },
   typeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   typeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  customDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary },
 
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { color: Colors.textMuted, fontSize: 15 },

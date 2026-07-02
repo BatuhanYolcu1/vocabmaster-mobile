@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   ScrollView, KeyboardAvoidingView, Platform, Alert,
@@ -17,7 +17,8 @@ const TYPE_OPTIONS = [
 ];
 
 export default function AddWordScreen() {
-  const { listId } = useLocalSearchParams<{ listId: string }>();
+  const { listId, wordId } = useLocalSearchParams<{ listId: string; wordId?: string }>();
+  const isEditing = !!wordId;
 
   const [word,      setWord]      = useState('');
   const [tr,        setTr]        = useState('');
@@ -26,6 +27,21 @@ export default function AddWordScreen() {
   const [exampleTr, setExampleTr] = useState('');
   const [type,      setType]      = useState('adjective');
   const [saving,    setSaving]    = useState(false);
+
+  useEffect(() => {
+    if (!wordId) return;
+    AsyncStorage.getItem(`words_${listId}`).then(raw => {
+      const words = raw ? JSON.parse(raw) : [];
+      const existing = words.find((w: any) => w.id === wordId);
+      if (!existing) return;
+      setWord(existing.word || '');
+      setTr(existing.tr || '');
+      setDef(existing.def || '');
+      setExample(existing.example || '');
+      setExampleTr(existing.exampleTr || '');
+      setType(existing.type || 'adjective');
+    });
+  }, [wordId, listId]);
 
   const trRef        = useRef<TextInput>(null);
   const defRef       = useRef<TextInput>(null);
@@ -42,18 +58,19 @@ export default function AddWordScreen() {
       const key  = `words_${listId}`;
       const raw  = await AsyncStorage.getItem(key);
       const list = raw ? JSON.parse(raw) : [];
-      const newWord = {
-        id:        Date.now().toString(),
-        word:      word.trim(),
-        tr:        tr.trim(),
-        def:       def.trim(),
-        example:   example.trim(),
-        exampleTr: exampleTr.trim(),
-        type,
-        mastery:   0,
-        createdAt: new Date().toISOString(),
-      };
-      list.push(newWord);
+      if (isEditing) {
+        const idx = list.findIndex((w: any) => w.id === wordId);
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], word: word.trim(), tr: tr.trim(), def: def.trim(), example: example.trim(), exampleTr: exampleTr.trim(), type };
+        }
+      } else {
+        list.push({
+          id: Date.now().toString(),
+          word: word.trim(), tr: tr.trim(), def: def.trim(),
+          example: example.trim(), exampleTr: exampleTr.trim(),
+          type, mastery: 0, createdAt: new Date().toISOString(),
+        });
+      }
       await AsyncStorage.setItem(key, JSON.stringify(list));
       router.back();
     } catch {
@@ -75,7 +92,7 @@ export default function AddWordScreen() {
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn} activeOpacity={0.7}>
             <SymbolView name="xmark" size={15} tintColor={Colors.textSecondary} type="monochrome" />
           </TouchableOpacity>
-          <Text style={s.title}>Yeni Kelime</Text>
+          <Text style={s.title}>{isEditing ? 'Kelimeyi Düzenle' : 'Yeni Kelime'}</Text>
           <TouchableOpacity
             style={[s.saveBtn, { backgroundColor: isValid ? Colors.primary : Colors.borderLight }]}
             onPress={handleSave}
@@ -83,7 +100,7 @@ export default function AddWordScreen() {
             disabled={!isValid || saving}
           >
             <Text style={[s.saveBtnText, { color: isValid ? '#fff' : Colors.textMuted }]}>
-              {saving ? '...' : 'Kaydet'}
+              {saving ? '...' : isEditing ? 'Güncelle' : 'Kaydet'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -212,7 +229,7 @@ export default function AddWordScreen() {
           >
             <SymbolView name="checkmark" size={15} tintColor="#fff" type="monochrome" />
             <Text style={s.primaryBtnText}>
-              {saving ? 'Kaydediliyor...' : 'Kelimeyi Kaydet'}
+              {saving ? 'Kaydediliyor...' : isEditing ? 'Değişiklikleri Kaydet' : 'Kelimeyi Kaydet'}
             </Text>
           </TouchableOpacity>
         </ScrollView>

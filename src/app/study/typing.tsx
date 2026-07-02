@@ -15,6 +15,7 @@ import Animated, {
 import { Colors } from '../../constants/colors';
 import { loadStudyWords, StudyWord } from '../../data/demoWords';
 import { recordSession } from '../../lib/stats';
+import { StudyEmpty } from '../../components/study-empty';
 
 const WORD_COLORS = [Colors.primary, '#22C55E', '#A855F7', Colors.accent, '#3B82F6'];
 const TYPE_LABELS: Record<string, string> = { noun: 'isim', verb: 'fiil', adjective: 'sıfat', adverb: 'zarf' };
@@ -112,6 +113,8 @@ export default function TypingScreen() {
   const inputBgColor     = status === 'correct' ? Colors.easyBg
                          : status === 'wrong'   ? Colors.hardBg
                          : Colors.bgCard;
+
+  if (!loading && words.length === 0) return <StudyEmpty listId={listId} />;
 
   // ── Done ──────────────────────────────────────────────────────────────────
   if (loading || !word) {

@@ -10,6 +10,7 @@ import Animated, {
 import { Colors } from '../../constants/colors';
 import { loadStudyWords, StudyWord } from '../../data/demoWords';
 import { recordSession } from '../../lib/stats';
+import { StudyEmpty } from '../../components/study-empty';
 
 type Question = { word: string; type: string; correct: string; options: string[] };
 
@@ -125,11 +126,20 @@ export default function QuizScreen() {
     return 'dimmed';
   };
 
+  if (!loading && wordsRef.current.length === 0) return <StudyEmpty listId={listId} />;
+
   if (loading || questions.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: Colors.textMuted }}>{loading ? 'Yükleniyor…' : 'Bu listede yeterli kelime yok.'}</Text>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 32 }}>
+          <Text style={{ color: Colors.textMuted, textAlign: 'center' }}>
+            {loading ? 'Yükleniyor…' : 'Quiz için en az 2 kelime gerekli. Listeye kelime ekleyin.'}
+          </Text>
+          {!loading && (
+            <TouchableOpacity onPress={() => router.replace('/(tabs)')} activeOpacity={0.8}>
+              <Text style={{ color: Colors.primary, fontWeight: '700' }}>Ana Sayfaya Dön</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
     );
