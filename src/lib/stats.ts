@@ -1,6 +1,29 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DEFAULT_LISTS } from '../data/demoWords';
 
 const DAY_NAMES = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+
+export const DEFAULT_DAILY_GOAL = 10;
+
+export type SRSCard = { interval: number; easeFactor: number; reviewCount: number; nextReviewTime: number };
+
+// 0=Yeni, 1=Öğreniliyor, 2=Tanıdık, 3=İyi, 4=Öğrenildi — interval büyüdükçe seviye artar
+export function masteryFromSRS(card?: SRSCard): number {
+  if (!card || !card.reviewCount) return 0;
+  if (card.interval >= 4 * 1440) return 4;
+  if (card.interval >= 1440) return 3;
+  if (card.interval >= 60) return 2;
+  return 1;
+}
+
+export async function loadSRSMap(listId: string): Promise<Record<string, SRSCard>> {
+  try {
+    const raw = await AsyncStorage.getItem(`srs_${listId}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
 
 export function todayStr() {
   return new Date().toISOString().split('T')[0];
@@ -55,9 +78,13 @@ export async function recordSession(correct: number, total: number, xp: number):
 
 export async function loadDashboardStats() {
   const today = todayStr();
+  const prev = new Date();
+  prev.setDate(prev.getDate() - 1);
+  const yesterday = prev.toISOString().split('T')[0];
+
   const pairs = await AsyncStorage.multiGet([
     'stats_total_xp', 'stats_streak', 'stats_daily_xp', 'daily_goal',
-    `stats_daily_words_${today}`,
+    `stats_daily_words_${today}`, 'stats_last_date',
   ]);
   const m = Object.fromEntries(pairs.map(([k, v]) => [k, v ?? null]));
 
@@ -72,11 +99,20 @@ export async function loadDashboardStats() {
 
   const dueCount = await countDueWords();
   const totalXp = parseInt(m.stats_total_xp ?? '0');
-  const streak = parseInt(m.stats_streak ?? '0');
   const todayWords = parseInt(m[`stats_daily_words_${today}`] ?? '0');
-  const dailyGoal = parseInt(m.daily_goal ?? '20');
+  const dailyGoal = parseInt(m.daily_goal ?? String(DEFAULT_DAILY_GOAL));
 
-  return { totalXp, streak, todayWords, dailyGoal, weeklyXp, dueCount };
+  // Seri, son çalışma bugün veya dün değilse kırılmıştır — kayıtlı değeri de sıfırla
+  let streak = parseInt(m.stats_streak ?? '0');
+  const lastDate = m.stats_last_date;
+  if (streak > 0 && lastDate !== today && lastDate !== yesterday) {
+    streak = 0;
+    await AsyncStorage.setItem('stats_streak', '0');
+  }
+
+  const studiedToday = lastDate === today;
+
+  return { totalXp, streak, todayWords, dailyGoal, weeklyXp, dueCount, studiedToday };
 }
 
 export async function loadProfileStats() {
@@ -102,13 +138,14 @@ export async function loadProfileStats() {
   const maxStreak = parseInt(m.stats_max_streak ?? '0');
   const level = Math.floor(totalXp / 1000) + 1;
   const levelXp = totalXp % 1000;
+  const defaultWordCount = DEFAULT_LISTS.reduce((sum, l) => sum + l.words.length, 0);
 
   return {
     totalXp,
     streak,
     maxStreak,
     accuracy,
-    totalWords: 22 + customWordCount,
+    totalWords: defaultWordCount + customWordCount,
     level,
     levelXp,
     nextLevelXp: 1000,

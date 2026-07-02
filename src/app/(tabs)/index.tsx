@@ -18,12 +18,13 @@ const QUICK_MODES = [
 type Stats = {
   totalXp: number; streak: number; todayWords: number;
   dailyGoal: number; weeklyXp: { name: string; xp: number }[]; dueCount: number;
+  studiedToday: boolean;
 };
 
 const EMPTY_STATS: Stats = {
-  totalXp: 0, streak: 0, todayWords: 0, dailyGoal: 20,
+  totalXp: 0, streak: 0, todayWords: 0, dailyGoal: 10,
   weeklyXp: [{ name: 'Pzt', xp: 0 }, { name: 'Sal', xp: 0 }, { name: 'Çar', xp: 0 }, { name: 'Per', xp: 0 }, { name: 'Cum', xp: 0 }, { name: 'Cmt', xp: 0 }, { name: 'Paz', xp: 0 }],
-  dueCount: 0,
+  dueCount: 0, studiedToday: true,
 };
 
 export default function DashboardScreen() {
@@ -118,6 +119,18 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {/* Streak risk uyarısı */}
+        {stats.streak > 0 && !stats.studiedToday && (
+          <TouchableOpacity style={styles.riskBanner} onPress={() => router.push('/study/select')} activeOpacity={0.85}>
+            <SymbolView name="flame.fill" size={18} tintColor={Colors.warning} type="monochrome" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.riskTitle}>Serin risk altında!</Text>
+              <Text style={styles.riskSub}>Bugün henüz çalışmadın — serini korumak için birkaç kelime yeter.</Text>
+            </View>
+            <SymbolView name="chevron.right" size={13} tintColor={Colors.warning} type="monochrome" />
+          </TouchableOpacity>
+        )}
+
         {/* CTA Buttons */}
         <View style={styles.ctaRow}>
           <TouchableOpacity style={styles.ctaPrimary} onPress={() => router.push('/study/select')} activeOpacity={0.88}>
@@ -131,15 +144,31 @@ export default function DashboardScreen() {
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           {[
-            { value: stats.dueCount,    label: 'Tekrar Bekliyor', color: Colors.warning  },
+            {
+              value: stats.dueCount, label: 'Tekrar Bekliyor', color: Colors.warning,
+              onPress: stats.dueCount > 0
+                ? () => router.push({ pathname: '/study/flashcard' as any, params: { listId: '_due' } })
+                : undefined,
+            },
             { value: stats.todayWords,  label: 'Bugün Çalışılan', color: Colors.success  },
-            { value: stats.todayWords,  label: 'Bugün',           color: Colors.primary  },
+            { value: stats.streak,      label: 'Günlük Seri',     color: Colors.primary  },
             { value: `%${Math.round(dailyPct)}`, label: 'Günlük Hedef', color: Colors.purple },
           ].map((s, i) => (
-            <View key={i} style={[styles.statCard, { borderLeftColor: s.color }]}>
+            <TouchableOpacity
+              key={i}
+              style={[styles.statCard, { borderLeftColor: s.color }]}
+              onPress={s.onPress}
+              disabled={!s.onPress}
+              activeOpacity={0.8}
+            >
               <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
+              {s.onPress && (
+                <View style={styles.statChevron}>
+                  <SymbolView name="chevron.right" size={11} tintColor={s.color} type="monochrome" />
+                </View>
+              )}
+            </TouchableOpacity>
           ))}
         </View>
 
@@ -232,6 +261,11 @@ const styles = StyleSheet.create({
   statCard: { flex: 1, minWidth: '45%', backgroundColor: Colors.bgCard, borderRadius: 14, padding: 16, gap: 5, borderLeftWidth: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
   statValue: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
   statLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
+  statChevron: { position: 'absolute', top: 14, right: 12 },
+
+  riskBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.warningLight, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, marginBottom: 16, borderWidth: 1, borderColor: Colors.warning + '40' },
+  riskTitle: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
+  riskSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 2, lineHeight: 15 },
 
   card: { backgroundColor: Colors.bgCard, borderRadius: 16, padding: 18, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },

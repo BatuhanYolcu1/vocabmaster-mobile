@@ -8,6 +8,7 @@ export type StudyWord = {
   example: string;
   exampleTr: string;
   type: string;
+  _listId?: string;
 };
 
 export type DefaultList = {
@@ -192,16 +193,49 @@ export const DEFAULT_LISTS: DefaultList[] = [
   },
 ];
 
+export async function loadDueWords(): Promise<StudyWord[]> {
+  try {
+    const now = Date.now();
+    const keys = await AsyncStorage.getAllKeys();
+    const srsKeys = keys.filter(k => k.startsWith('srs_'));
+    if (srsKeys.length === 0) return [];
+
+    const srsEntries = await AsyncStorage.multiGet(srsKeys);
+    const dueWords: StudyWord[] = [];
+
+    for (const [srsKey, val] of srsEntries) {
+      if (!val) continue;
+      const listId = srsKey.replace('srs_', '');
+      const srsData: Record<string, { nextReviewTime: number }> = JSON.parse(val);
+      const words = await loadStudyWords(listId);
+
+      for (const w of words) {
+        const srs = srsData[w.id];
+        if (srs && srs.nextReviewTime <= now) {
+          dueWords.push({ ...w, _listId: listId });
+        }
+      }
+    }
+    return dueWords;
+  } catch {
+    return [];
+  }
+}
+
 export async function loadStudyWords(listId: string | undefined): Promise<StudyWord[]> {
   if (!listId) return DEFAULT_LISTS[0].words;
-  const def = DEFAULT_LISTS.find(l => l.id === listId);
-  if (def) return def.words;
+  if (listId === '_due') return loadDueWords();
 
+  const def = DEFAULT_LISTS.find(l => l.id === listId);
+  const defWords = def ? def.words : [];
+
+  // Default listeye kullanıcı tarafından eklenen kelimeler de dahil edilir;
+  // custom listelerde ise tek kaynak words_{listId}'dir
   try {
     const raw = await AsyncStorage.getItem(`words_${listId}`);
-    if (!raw) return DEFAULT_LISTS[0].words;
+    if (!raw) return defWords;
     const custom: Record<string, string>[] = JSON.parse(raw);
-    return custom.map((w, i) => ({
+    const customWords = custom.map((w, i) => ({
       id: w.id || String(i),
       word: w.word || '',
       tr: w.tr || '',
@@ -210,7 +244,8 @@ export async function loadStudyWords(listId: string | undefined): Promise<StudyW
       exampleTr: w.exampleTr || '',
       type: w.type || 'noun',
     }));
+    return [...defWords, ...customWords];
   } catch {
-    return DEFAULT_LISTS[0].words;
+    return defWords;
   }
 }

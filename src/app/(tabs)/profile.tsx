@@ -15,7 +15,7 @@ type ProfileStats = {
 
 const EMPTY: ProfileStats = {
   totalXp: 0, streak: 0, maxStreak: 0, accuracy: 0,
-  totalWords: 22, level: 1, levelXp: 0, nextLevelXp: 1000,
+  totalWords: 0, level: 1, levelXp: 0, nextLevelXp: 1000,
 };
 
 const GOAL_OPTIONS = [
@@ -29,7 +29,7 @@ export default function ProfileScreen() {
   const [userName, setUserName] = useState('');
   const [ps, setPs] = useState<ProfileStats>(EMPTY);
   const [goalModal, setGoalModal] = useState(false);
-  const [currentGoal, setCurrentGoal] = useState('20');
+  const [currentGoal, setCurrentGoal] = useState('10');
 
   useFocusEffect(useCallback(() => {
     Promise.all([
@@ -58,7 +58,7 @@ export default function ProfileScreen() {
     { label: 'Bildirimler',  symbol: 'bell.fill',               color: Colors.primary, onPress: () => router.push('/settings/notifications') },
     { label: 'Günlük Hedef', symbol: 'target',                  color: Colors.green,   onPress: () => setGoalModal(true) },
     { label: 'Gizlilik',     symbol: 'lock.shield.fill',        color: Colors.blue,    onPress: () => router.push('/settings/privacy' as any) },
-    { label: 'Yardım',       symbol: 'questionmark.circle.fill', color: Colors.purple,  onPress: () => router.push('/settings/privacy' as any) },
+    { label: 'Yardım',       symbol: 'questionmark.circle.fill', color: Colors.purple,  onPress: () => router.push('/settings/help' as any) },
   ];
 
   const handleLogout = () => {

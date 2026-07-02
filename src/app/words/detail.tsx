@@ -1,26 +1,74 @@
+import { useState, useCallback } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
 import { SymbolView } from 'expo-symbols';
 import { Colors } from '../../constants/colors';
-
-// Reuse same data map — in real app this would come from a store/API
-import { LIST_DATA } from './[listId]';
+import { DEFAULT_LISTS, StudyWord } from '../../data/demoWords';
+import { masteryFromSRS, loadSRSMap } from '../../lib/stats';
 
 const MASTERY_COLORS = ['#D1D5DB', Colors.accent, '#FBBF24', '#86EFAC', Colors.easy];
 const MASTERY_LABELS = ['Yeni', 'Öğreniliyor', 'Tanıdık', 'İyi', 'Öğrenildi'];
 const TYPE_LABELS: Record<string, string> = { noun: 'isim', verb: 'fiil', adjective: 'sıfat', adverb: 'zarf' };
 
+type ListMeta = { name: string; color: string };
+
 export default function WordDetailScreen() {
   const { listId, wordId } = useLocalSearchParams<{ listId: string; wordId: string }>();
-  const list = LIST_DATA[listId ?? '1'];
-  const word = list?.words.find(w => w.id === wordId);
+  const [word, setWord] = useState<StudyWord | null>(null);
+  const [listMeta, setListMeta] = useState<ListMeta | null>(null);
+  const [mastery, setMastery] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  if (!list || !word) return null;
+  useFocusEffect(useCallback(() => {
+    (async () => {
+      const def = DEFAULT_LISTS.find(l => l.id === listId);
+      let meta: ListMeta | null = def ? { name: def.name, color: def.color } : null;
+      let found: StudyWord | undefined = def?.words.find(w => w.id === wordId);
 
-  const masteryColor = MASTERY_COLORS[word.mastery];
-  const masteryLabel = MASTERY_LABELS[word.mastery];
+      // Custom kelime veya custom liste — AsyncStorage'dan
+      if (!found) {
+        const raw = await AsyncStorage.getItem(`words_${listId}`);
+        const customWords: StudyWord[] = raw ? JSON.parse(raw) : [];
+        found = customWords.find(w => w.id === wordId);
+      }
+      if (!meta) {
+        const listsRaw = await AsyncStorage.getItem('custom_lists');
+        const lists = listsRaw ? JSON.parse(listsRaw) : [];
+        const foundList = lists.find((l: any) => l.id === listId);
+        if (foundList) meta = { name: foundList.name, color: foundList.color || Colors.primary };
+      }
+
+      const srsMap = listId ? await loadSRSMap(listId) : {};
+      setMastery(found ? masteryFromSRS(srsMap[found.id]) : 0);
+      setWord(found ?? null);
+      setListMeta(meta ?? { name: '', color: Colors.primary });
+      setLoading(false);
+    })();
+  }, [listId, wordId]));
+
+  if (loading) return <SafeAreaView style={s.safe} />;
+
+  if (!word || !listMeta) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <View style={s.notFound}>
+          <SymbolView name="questionmark.circle" size={32} tintColor={Colors.textMuted} type="monochrome" />
+          <Text style={s.notFoundText}>Kelime bulunamadı</Text>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
+            <Text style={s.notFoundLink}>Geri Dön</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const color = listMeta.color;
+  const level = Math.min(mastery, 4);
+  const masteryColor = MASTERY_COLORS[level];
+  const masteryLabel = MASTERY_LABELS[level];
 
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
@@ -36,11 +84,11 @@ export default function WordDetailScreen() {
 
         {/* Hero Card */}
         <View style={s.heroCard}>
-          <View style={[s.heroStrip, { backgroundColor: list.color }]} />
+          <View style={[s.heroStrip, { backgroundColor: color }]} />
           <View style={s.heroBody}>
             <View style={s.heroTop}>
-              <View style={[s.typePill, { backgroundColor: list.color + '18' }]}>
-                <Text style={[s.typeText, { color: list.color }]}>
+              <View style={[s.typePill, { backgroundColor: color + '18' }]}>
+                <Text style={[s.typeText, { color }]}>
                   {TYPE_LABELS[word.type] ?? word.type}
                 </Text>
               </View>
@@ -49,8 +97,8 @@ export default function WordDetailScreen() {
                 onPress={() => Speech.speak(word.word, { language: 'en-US', rate: 0.85 })}
                 activeOpacity={0.75}
               >
-                <SymbolView name="speaker.wave.2.fill" size={14} tintColor={list.color} type="monochrome" />
-                <Text style={[s.listenText, { color: list.color }]}>Dinle</Text>
+                <SymbolView name="speaker.wave.2.fill" size={14} tintColor={color} type="monochrome" />
+                <Text style={[s.listenText, { color }]}>Dinle</Text>
               </TouchableOpacity>
             </View>
             <Text style={s.wordText}>{word.word}</Text>
@@ -61,7 +109,7 @@ export default function WordDetailScreen() {
         {/* Mastery */}
         <View style={s.masteryCard}>
           <View style={s.masteryLeft}>
-            <Text style={s.masteryCardLabel}>Ustalik Seviyesi</Text>
+            <Text style={s.masteryCardLabel}>Ustalık Seviyesi</Text>
             <Text style={[s.masteryLevelText, { color: masteryColor }]}>{masteryLabel}</Text>
           </View>
           <View style={s.masteryDots}>
@@ -69,8 +117,8 @@ export default function WordDetailScreen() {
               <View
                 key={i}
                 style={[s.dot, {
-                  backgroundColor: i < word.mastery ? masteryColor : Colors.borderLight,
-                  transform: [{ scale: i < word.mastery ? 1 : 0.85 }],
+                  backgroundColor: i < level ? masteryColor : Colors.borderLight,
+                  transform: [{ scale: i < level ? 1 : 0.85 }],
                 }]}
               />
             ))}
@@ -79,26 +127,31 @@ export default function WordDetailScreen() {
 
         {/* Info Sections */}
         <View style={s.infoCard}>
-          <View style={s.section}>
-            <Text style={[s.sectionLabel, { color: list.color }]}>Tanım</Text>
-            <Text style={s.sectionText}>{word.def}</Text>
-          </View>
+          {!!word.def && (
+            <>
+              <View style={s.section}>
+                <Text style={[s.sectionLabel, { color }]}>Tanım</Text>
+                <Text style={s.sectionText}>{word.def}</Text>
+              </View>
+              <View style={s.divider} />
+            </>
+          )}
 
-          <View style={s.divider} />
-
-          <View style={s.section}>
-            <Text style={[s.sectionLabel, { color: list.color }]}>Örnek Cümle</Text>
-            <View style={s.exampleBox}>
-              <Text style={s.exampleEn}>"{word.example}"</Text>
-              <Text style={s.exampleTr}>{word.exampleTr}</Text>
+          {!!word.example && (
+            <View style={s.section}>
+              <Text style={[s.sectionLabel, { color }]}>Örnek Cümle</Text>
+              <View style={s.exampleBox}>
+                <Text style={s.exampleEn}>"{word.example}"</Text>
+                {!!word.exampleTr && <Text style={s.exampleTr}>{word.exampleTr}</Text>}
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         {/* Actions */}
         <TouchableOpacity
-          style={[s.primaryBtn, { backgroundColor: list.color }]}
-          onPress={() => router.push('/study/select')}
+          style={[s.primaryBtn, { backgroundColor: color }]}
+          onPress={() => router.push({ pathname: '/study/flashcard' as any, params: { listId, wordId: word.id } })}
           activeOpacity={0.88}
         >
           <SymbolView name="play.fill" size={14} tintColor="#fff" type="monochrome" />
@@ -124,6 +177,10 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
   headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+
+  notFound: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  notFoundText: { color: Colors.textMuted, fontSize: 15 },
+  notFoundLink: { color: Colors.primary, fontWeight: '700', fontSize: 14 },
 
   heroCard: { backgroundColor: Colors.bgCard, borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 4 },
   heroStrip: { height: 6 },
