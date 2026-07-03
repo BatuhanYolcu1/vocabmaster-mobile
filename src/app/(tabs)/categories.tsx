@@ -165,7 +165,7 @@ const s = StyleSheet.create({
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
   },
   addText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  content: { paddingHorizontal: 20, paddingBottom: 40 },
+  content: { paddingHorizontal: 20, paddingBottom: 120 },
   card: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 10,

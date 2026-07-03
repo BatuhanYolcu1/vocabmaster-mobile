@@ -119,7 +119,7 @@ const s = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
   title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
   subtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 3 },
-  content: { padding: 20, paddingBottom: 40, gap: 12 },
+  content: { padding: 20, paddingBottom: 120, gap: 12 },
 
   comingBanner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: Colors.primaryLight, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.primarySoft },
   comingInfo: { flex: 1 },

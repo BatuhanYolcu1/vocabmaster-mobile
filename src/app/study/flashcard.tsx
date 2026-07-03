@@ -12,10 +12,16 @@ import Animated, {
   interpolate, runOnJS, Extrapolation,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/colors';
+import { Fonts } from '../../constants/typography';
 import { loadStudyWords, StudyWord } from '../../data/demoWords';
 import { recordSession, saveSRSCard } from '../../lib/stats';
 import { StudyEmpty } from '../../components/study-empty';
+import { StudySkeleton } from '../../components/skeleton';
+import { Confetti } from '../../components/confetti';
+import { SpringIn, CountUp } from '../../components/anim';
+import { LevelUpModal } from '../../components/level-up-modal';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 75;
@@ -51,6 +57,7 @@ export default function FlashcardScreen() {
   const [good, setGood] = useState(0);
   const [easy, setEasy] = useState(0);
   const [done, setDone] = useState(false);
+  const [levelUp, setLevelUp] = useState<number | null>(null);
 
   const indexRef = useRef(0);
   indexRef.current = index;
@@ -179,20 +186,16 @@ export default function FlashcardScreen() {
 
   if (!loading && words.length === 0) return <StudyEmpty listId={listId} />;
 
-  if (loading || !word) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: Colors.textMuted }}>Yükleniyor…</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  if (loading || !word) return <StudySkeleton />;
 
   const cardFaces = (
     <View style={styles.cardWrapper}>
       <Animated.View style={[styles.card, frontFace]}>
-        <View style={[styles.cardTop, { backgroundColor: accentColor }]}>
+        <LinearGradient
+          colors={[accentColor, accentColor + 'CC']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={styles.cardTop}
+        >
           <View style={styles.typePill}>
             <Text style={styles.typeText}>{TYPE_LABELS[word.type] ?? word.type}</Text>
           </View>
@@ -201,7 +204,7 @@ export default function FlashcardScreen() {
             <SymbolView name="speaker.wave.2.fill" size={14} tintColor="rgba(255,255,255,0.9)" type="monochrome" />
             <Text style={styles.listenText}>Dinle</Text>
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
         <View style={styles.cardBottom}>
           <Text style={styles.tapHint}>Çevirmek için dokun</Text>
           <View style={[styles.tapHintLine, { backgroundColor: accentColor + '30' }]} />
@@ -240,36 +243,44 @@ export default function FlashcardScreen() {
     const acc   = total > 0 ? Math.round(((good + easy) / total) * 100) : 0;
     if (!sessionSaved.current) {
       sessionSaved.current = true;
-      recordSession(good + easy, total, xp).catch(() => {});
+      recordSession(good + easy, total, xp)
+        .then(r => { if (r.leveledUp) setLevelUp(r.newLevel); })
+        .catch(() => {});
     }
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.doneContent}>
-          <View style={[styles.doneIconWrap, { backgroundColor: acc >= 80 ? Colors.warningLight : Colors.primaryLight }]}>
-            <SymbolView name={acc >= 80 ? 'trophy.fill' : acc >= 60 ? 'star.fill' : 'hand.thumbsup.fill'} size={38} tintColor={acc >= 80 ? Colors.warning : Colors.primary} type="monochrome" />
-          </View>
+          <SpringIn>
+            <View style={[styles.doneIconWrap, { backgroundColor: acc >= 80 ? Colors.warningLight : Colors.primaryLight }]}>
+              <SymbolView name={acc >= 80 ? 'trophy.fill' : acc >= 60 ? 'star.fill' : 'hand.thumbsup.fill'} size={38} tintColor={acc >= 80 ? Colors.warning : Colors.primary} type="monochrome" />
+            </View>
+          </SpringIn>
           <Text style={styles.doneTitle}>Oturum Tamamlandı</Text>
           <Text style={styles.doneAcc}>{acc}% doğruluk</Text>
-          <View style={styles.xpCard}>
-            <Text style={styles.xpCardLabel}>Kazanılan XP</Text>
-            <Text style={styles.xpCardVal}>+{xp}</Text>
-          </View>
-          <View style={styles.resultsCard}>
-            {[
-              { label: 'Zor', count: hard, color: Colors.hard, bg: Colors.hardBg },
-              { label: 'İyi', count: good, color: Colors.good, bg: Colors.goodBg },
-              { label: 'Kolay', count: easy, color: Colors.easy, bg: Colors.easyBg },
-            ].map((r) => (
-              <View key={r.label} style={styles.resultRow}>
-                <View style={[styles.resultDot, { backgroundColor: r.color }]} />
-                <Text style={[styles.resultLabel, { color: r.color }]}>{r.label}</Text>
-                <View style={styles.resultBarWrap}>
-                  <View style={[styles.resultBar, { width: `${(r.count / total) * 100}%` as any, backgroundColor: r.bg, borderColor: r.color + '50' }]} />
+          <SpringIn delay={150} style={{ width: '100%', alignItems: 'center' }}>
+            <View style={styles.xpCard}>
+              <Text style={styles.xpCardLabel}>Kazanılan XP</Text>
+              <CountUp value={xp} prefix="+" style={styles.xpCardVal} />
+            </View>
+          </SpringIn>
+          <SpringIn delay={300} style={{ width: '100%' }}>
+            <View style={styles.resultsCard}>
+              {[
+                { label: 'Zor', count: hard, color: Colors.hard, bg: Colors.hardBg },
+                { label: 'İyi', count: good, color: Colors.good, bg: Colors.goodBg },
+                { label: 'Kolay', count: easy, color: Colors.easy, bg: Colors.easyBg },
+              ].map((r) => (
+                <View key={r.label} style={styles.resultRow}>
+                  <View style={[styles.resultDot, { backgroundColor: r.color }]} />
+                  <Text style={[styles.resultLabel, { color: r.color }]}>{r.label}</Text>
+                  <View style={styles.resultBarWrap}>
+                    <View style={[styles.resultBar, { width: `${(r.count / total) * 100}%` as any, backgroundColor: r.bg, borderColor: r.color + '50' }]} />
+                  </View>
+                  <Text style={[styles.resultCount, { color: r.color }]}>{r.count}</Text>
                 </View>
-                <Text style={[styles.resultCount, { color: r.color }]}>{r.count}</Text>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          </SpringIn>
           <TouchableOpacity style={styles.doneBtn} onPress={() => router.replace('/(tabs)')} activeOpacity={0.88}>
             <Text style={styles.doneBtnText}>Ana Sayfaya Dön</Text>
           </TouchableOpacity>
@@ -277,6 +288,8 @@ export default function FlashcardScreen() {
             <Text style={styles.againBtnText}>Tekrar Çalış</Text>
           </TouchableOpacity>
         </ScrollView>
+        {acc >= 80 && <Confetti />}
+        <LevelUpModal level={levelUp ?? 0} visible={levelUp !== null} onClose={() => setLevelUp(null)} />
       </SafeAreaView>
     );
   }
@@ -358,7 +371,7 @@ const styles = StyleSheet.create({
   cardTop: { paddingTop: 32, paddingBottom: 28, paddingHorizontal: 28, alignItems: 'center', gap: 14 },
   typePill: { backgroundColor: 'rgba(255,255,255,0.22)', paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20 },
   typeText: { color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  wordText: { color: '#fff', fontSize: 46, fontWeight: '800', textAlign: 'center', letterSpacing: -1 },
+  wordText: { color: '#fff', fontSize: 46, fontFamily: Fonts.headingBlack, textAlign: 'center', letterSpacing: -1 },
   listenBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20 },
   listenText: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '600' },
   cardBottom: { paddingVertical: 20, alignItems: 'center', gap: 12 },
@@ -390,7 +403,7 @@ const styles = StyleSheet.create({
   showBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   doneContent: { padding: 24, alignItems: 'center', gap: 16, paddingBottom: 40 },
   doneIconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginTop: 32, marginBottom: 4 },
-  doneTitle: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
+  doneTitle: { fontSize: 28, fontFamily: Fonts.headingBlack, color: Colors.textPrimary, letterSpacing: -0.5 },
   doneAcc: { fontSize: 16, color: Colors.textSecondary },
   xpCard: { backgroundColor: Colors.accentLight, borderRadius: 16, paddingHorizontal: 36, paddingVertical: 16, alignItems: 'center', gap: 4, borderWidth: 1, borderColor: Colors.accentSoft },
   xpCardLabel: { color: Colors.accent, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 },

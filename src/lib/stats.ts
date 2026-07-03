@@ -29,8 +29,10 @@ export function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
 
-export async function recordSession(correct: number, total: number, xp: number): Promise<void> {
-  if (total === 0) return;
+export type SessionResult = { leveledUp: boolean; newLevel: number };
+
+export async function recordSession(correct: number, total: number, xp: number): Promise<SessionResult> {
+  if (total === 0) return { leveledUp: false, newLevel: 1 };
   const today = todayStr();
   const prev = new Date();
   prev.setDate(prev.getDate() - 1);
@@ -42,7 +44,10 @@ export async function recordSession(correct: number, total: number, xp: number):
   ]);
   const m = Object.fromEntries(pairs.map(([k, v]) => [k, v ?? null]));
 
-  const totalXp = parseInt(m.stats_total_xp ?? '0') + xp;
+  const prevXp = parseInt(m.stats_total_xp ?? '0');
+  const totalXp = prevXp + xp;
+  const prevLevel = Math.floor(prevXp / 1000) + 1;
+  const newLevel = Math.floor(totalXp / 1000) + 1;
   const lastDate = m.stats_last_date;
   const cur = parseInt(m.stats_streak ?? '0');
   let newStreak = cur;
@@ -74,6 +79,8 @@ export async function recordSession(correct: number, total: number, xp: number):
     ['stats_daily_xp', JSON.stringify(dailyXp)],
     [todayWordsKey, newTodayWords.toString()],
   ]);
+
+  return { leveledUp: newLevel > prevLevel, newLevel };
 }
 
 export async function loadDashboardStats() {

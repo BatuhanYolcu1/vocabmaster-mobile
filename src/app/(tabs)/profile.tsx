@@ -4,8 +4,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/colors';
+import { Fonts } from '../../constants/typography';
 import { loadProfileStats } from '../../lib/stats';
+
+// İsim hash'ine göre kişisel avatar gradyanı
+const AVATAR_GRADIENTS: [string, string][] = [
+  ['#5B4CF5', '#7C3AED'],
+  ['#F97316', '#EF4444'],
+  ['#22C55E', '#0EA5E9'],
+  ['#EC4899', '#A855F7'],
+  ['#3B82F6', '#06B6D4'],
+  ['#F59E0B', '#F97316'],
+];
 
 type ProfileStats = {
   totalXp: number; streak: number; maxStreak: number;
@@ -47,6 +59,8 @@ export default function ProfileScreen() {
   const initials    = displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
   const levelPct    = Math.min((ps.levelXp / ps.nextLevelXp) * 100, 100);
   const xpToNext    = ps.nextLevelXp - ps.levelXp;
+  const nameHash    = displayName.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const avatarColors = AVATAR_GRADIENTS[nameHash % AVATAR_GRADIENTS.length];
 
   const setGoal = async (val: string) => {
     await AsyncStorage.setItem('daily_goal', val);
@@ -80,9 +94,13 @@ export default function ProfileScreen() {
 
         {/* Avatar */}
         <View style={s.hero}>
-          <View style={s.avatar}>
+          <LinearGradient
+            colors={avatarColors}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={s.avatar}
+          >
             <Text style={s.avatarText}>{initials}</Text>
-          </View>
+          </LinearGradient>
           <Text style={s.name}>{displayName}</Text>
           <View style={s.freeBadge}>
             <Text style={s.freeBadgeText}>Ücretsiz Plan</Text>
@@ -90,7 +108,11 @@ export default function ProfileScreen() {
         </View>
 
         {/* Level card */}
-        <View style={s.levelCard}>
+        <LinearGradient
+          colors={[Colors.primary, '#7C3AED']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={s.levelCard}
+        >
           <View style={s.levelHeader}>
             <View>
               <Text style={s.levelTitle}>Seviye {ps.level}</Text>
@@ -105,7 +127,7 @@ export default function ProfileScreen() {
             <View style={[s.xpFill, { width: `${levelPct}%` as any }]} />
           </View>
           <Text style={s.xpNote}>{xpToNext} XP daha → Seviye {ps.level + 1}</Text>
-        </View>
+        </LinearGradient>
 
         {/* Stats Grid */}
         <View style={s.statsGrid}>
@@ -178,25 +200,25 @@ export default function ProfileScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
-  content: { padding: 20, paddingBottom: 50, gap: 16 },
+  content: { padding: 20, paddingBottom: 120, gap: 16 },
 
   hero: { alignItems: 'center', gap: 6, paddingVertical: 8 },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 4, borderWidth: 3, borderColor: Colors.primarySoft },
-  avatarText: { color: Colors.primary, fontSize: 26, fontWeight: '800' },
-  name: { color: Colors.textPrimary, fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
+  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 10, elevation: 5 },
+  avatarText: { color: '#fff', fontSize: 26, fontFamily: Fonts.headingBlack },
+  name: { color: Colors.textPrimary, fontSize: 20, fontFamily: Fonts.headingBlack, letterSpacing: -0.3 },
   freeBadge: { backgroundColor: Colors.accentLight, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginTop: 2, borderWidth: 1, borderColor: Colors.accentSoft },
   freeBadgeText: { color: Colors.accent, fontWeight: '700', fontSize: 12 },
 
-  levelCard: { backgroundColor: Colors.bgCard, borderRadius: 16, padding: 18, gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  levelCard: { borderRadius: 16, padding: 18, gap: 10, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 5 },
   levelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  levelTitle: { color: Colors.textPrimary, fontWeight: '800', fontSize: 18 },
-  levelSub: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },
-  streakPill: { backgroundColor: Colors.accentLight, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: Colors.accentSoft },
-  streakVal: { color: Colors.accent, fontSize: 20, fontWeight: '900' },
-  streakLabel: { color: Colors.accent, fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
-  xpTrack: { height: 8, backgroundColor: Colors.borderLight, borderRadius: 4, overflow: 'hidden' },
-  xpFill: { height: '100%', backgroundColor: Colors.primary, borderRadius: 4 },
-  xpNote: { color: Colors.textMuted, fontSize: 11 },
+  levelTitle: { color: '#fff', fontFamily: Fonts.heading, fontSize: 18 },
+  levelSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 3 },
+  streakPill: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
+  streakVal: { color: '#fff', fontSize: 20, fontWeight: '900' },
+  streakLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 9, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+  xpTrack: { height: 8, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 4, overflow: 'hidden' },
+  xpFill: { height: '100%', backgroundColor: '#fff', borderRadius: 4 },
+  xpNote: { color: 'rgba(255,255,255,0.75)', fontSize: 11 },
 
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   statCard: { flex: 1, minWidth: '45%', backgroundColor: Colors.bgCard, borderRadius: 14, padding: 14, gap: 4, borderTopWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },

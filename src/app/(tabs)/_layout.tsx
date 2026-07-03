@@ -1,7 +1,11 @@
 import { Tabs } from 'expo-router';
 import { View, StyleSheet, Platform } from 'react-native';
 import { SymbolView } from 'expo-symbols';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Colors } from '../../constants/colors';
+
+// iOS 26+ liquid glass; desteklenmeyen platformlarda klasik beyaz bar
+const GLASS = isLiquidGlassAvailable();
 
 function TabIcon({ focused, name }: { focused: boolean; name: string }) {
   return (
@@ -18,7 +22,18 @@ function TabIcon({ focused, name }: { focused: boolean; name: string }) {
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarStyle: styles.tabBar, tabBarShowLabel: false }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarShowLabel: false,
+        tabBarStyle: GLASS ? styles.tabBarGlass : styles.tabBar,
+        ...(GLASS && {
+          tabBarBackground: () => (
+            <GlassView glassEffectStyle="regular" style={StyleSheet.absoluteFill} />
+          ),
+        }),
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{ tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="house.fill" /> }}
@@ -62,6 +77,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 12,
     elevation: 10,
+  },
+  tabBarGlass: {
+    position: 'absolute',
+    backgroundColor: 'transparent',
+    borderTopWidth: 0,
+    height: Platform.OS === 'ios' ? 88 : 68,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+    paddingTop: 8,
+    elevation: 0,
   },
   iconWrap: {
     width: 44,

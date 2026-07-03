@@ -13,9 +13,14 @@ import Animated, {
   withSequence, Easing,
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/colors';
+import { Fonts } from '../../constants/typography';
 import { loadStudyWords, StudyWord } from '../../data/demoWords';
 import { recordSession } from '../../lib/stats';
 import { StudyEmpty } from '../../components/study-empty';
+import { StudySkeleton } from '../../components/skeleton';
+import { Confetti } from '../../components/confetti';
+import { SpringIn, CountUp } from '../../components/anim';
+import { LevelUpModal } from '../../components/level-up-modal';
 
 const WORD_COLORS = [Colors.primary, '#22C55E', '#A855F7', Colors.accent, '#3B82F6'];
 const TYPE_LABELS: Record<string, string> = { noun: 'isim', verb: 'fiil', adjective: 'sıfat', adverb: 'zarf' };
@@ -37,6 +42,7 @@ export default function TypingScreen() {
   const [correct, setCorrect] = useState(0);
   const [wrong,   setWrong]   = useState(0);
   const [done,    setDone]    = useState(false);
+  const [levelUp, setLevelUp] = useState<number | null>(null);
   const inputRef = useRef<TextInput>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionSaved = useRef(false);
@@ -117,15 +123,7 @@ export default function TypingScreen() {
   if (!loading && words.length === 0) return <StudyEmpty listId={listId} />;
 
   // ── Done ──────────────────────────────────────────────────────────────────
-  if (loading || !word) {
-    return (
-      <SafeAreaView style={s.safe}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: Colors.textMuted }}>Yükleniyor…</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  if (loading || !word) return <StudySkeleton />;
 
   if (done) {
     const total = words.length;
@@ -133,32 +131,40 @@ export default function TypingScreen() {
     const xp    = correct * 12;
     if (!sessionSaved.current) {
       sessionSaved.current = true;
-      recordSession(correct, total, xp).catch(() => {});
+      recordSession(correct, total, xp)
+        .then(r => { if (r.leveledUp) setLevelUp(r.newLevel); })
+        .catch(() => {});
     }
     return (
       <SafeAreaView style={s.safe}>
         <ScrollView contentContainerStyle={s.doneContent}>
-          <View style={[s.doneIcon, { backgroundColor: acc >= 70 ? Colors.primaryLight : Colors.warningLight }]}>
-            <SymbolView name={acc >= 80 ? 'trophy.fill' : 'star.fill'} size={38} tintColor={acc >= 80 ? Colors.warning : Colors.primary} type="monochrome" />
-          </View>
+          <SpringIn>
+            <View style={[s.doneIcon, { backgroundColor: acc >= 70 ? Colors.primaryLight : Colors.warningLight }]}>
+              <SymbolView name={acc >= 80 ? 'trophy.fill' : 'star.fill'} size={38} tintColor={acc >= 80 ? Colors.warning : Colors.primary} type="monochrome" />
+            </View>
+          </SpringIn>
           <Text style={s.doneTitle}>Harika!</Text>
           <Text style={s.doneAcc}>{correct} / {total} doğru · {acc}%</Text>
-          <View style={s.xpCard}>
-            <Text style={s.xpLabel}>Kazanılan XP</Text>
-            <Text style={s.xpVal}>+{xp}</Text>
-          </View>
-          <View style={s.resultRow}>
-            <View style={[s.resultStat, { backgroundColor: Colors.easyBg, borderColor: Colors.easy + '50' }]}>
-              <SymbolView name="checkmark.circle.fill" size={22} tintColor={Colors.easy} type="monochrome" />
-              <Text style={[s.resultNum, { color: Colors.easy }]}>{correct}</Text>
-              <Text style={s.resultLbl}>Doğru</Text>
+          <SpringIn delay={150} style={{ width: '100%', alignItems: 'center' }}>
+            <View style={s.xpCard}>
+              <Text style={s.xpLabel}>Kazanılan XP</Text>
+              <CountUp value={xp} prefix="+" style={s.xpVal} />
             </View>
-            <View style={[s.resultStat, { backgroundColor: Colors.hardBg, borderColor: Colors.hard + '50' }]}>
-              <SymbolView name="xmark.circle.fill" size={22} tintColor={Colors.hard} type="monochrome" />
-              <Text style={[s.resultNum, { color: Colors.hard }]}>{wrong}</Text>
-              <Text style={s.resultLbl}>Yanlış</Text>
+          </SpringIn>
+          <SpringIn delay={300} style={{ width: '100%' }}>
+            <View style={s.resultRow}>
+              <View style={[s.resultStat, { backgroundColor: Colors.easyBg, borderColor: Colors.easy + '50' }]}>
+                <SymbolView name="checkmark.circle.fill" size={22} tintColor={Colors.easy} type="monochrome" />
+                <Text style={[s.resultNum, { color: Colors.easy }]}>{correct}</Text>
+                <Text style={s.resultLbl}>Doğru</Text>
+              </View>
+              <View style={[s.resultStat, { backgroundColor: Colors.hardBg, borderColor: Colors.hard + '50' }]}>
+                <SymbolView name="xmark.circle.fill" size={22} tintColor={Colors.hard} type="monochrome" />
+                <Text style={[s.resultNum, { color: Colors.hard }]}>{wrong}</Text>
+                <Text style={s.resultLbl}>Yanlış</Text>
+              </View>
             </View>
-          </View>
+          </SpringIn>
           <TouchableOpacity style={s.doneBtn} onPress={() => router.replace('/(tabs)')} activeOpacity={0.88}>
             <Text style={s.doneBtnText}>Ana Sayfaya Dön</Text>
           </TouchableOpacity>
@@ -166,6 +172,8 @@ export default function TypingScreen() {
             <Text style={s.againBtnText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </ScrollView>
+        {acc >= 80 && <Confetti />}
+        <LevelUpModal level={levelUp ?? 0} visible={levelUp !== null} onClose={() => setLevelUp(null)} />
       </SafeAreaView>
     );
   }
@@ -311,7 +319,7 @@ const s = StyleSheet.create({
 
   doneContent: { padding: 24, alignItems: 'center', gap: 16, paddingBottom: 40 },
   doneIcon: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginTop: 32 },
-  doneTitle: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
+  doneTitle: { fontSize: 28, fontFamily: Fonts.headingBlack, color: Colors.textPrimary, letterSpacing: -0.5 },
   doneAcc: { fontSize: 15, color: Colors.textSecondary },
   xpCard: { backgroundColor: Colors.accentLight, borderRadius: 16, paddingHorizontal: 36, paddingVertical: 16, alignItems: 'center', gap: 4, borderWidth: 1, borderColor: Colors.accentSoft },
   xpLabel: { color: Colors.accent, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 },
