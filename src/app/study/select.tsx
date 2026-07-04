@@ -5,7 +5,7 @@ import { useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
 import { Colors } from '../../constants/colors';
-import { DEFAULT_LISTS } from '../../data/demoWords';
+import { DEFAULT_LISTS, loadFavRefs } from '../../data/demoWords';
 import { countDueWords } from '../../lib/stats';
 
 type ListItem = { id: string; name: string; count: number; color: string; symbol: string };
@@ -47,6 +47,21 @@ const MODES = [
     bg: '#FDF2F8',
     free: true,
   },
+  {
+    id: 'matching',
+    name: 'Eşleştirme',
+    desc: 'Kelimeyi anlamıyla eşleştir',
+    symbol: 'squares.leading.rectangle',
+    color: Colors.blue,
+    bg: Colors.blueLight,
+    free: true,
+  },
+];
+
+const COUNT_OPTIONS = [
+  { value: '10',  label: '10' },
+  { value: '20',  label: '20' },
+  { value: 'all', label: 'Tümü' },
 ];
 
 export default function StudySelectScreen() {
@@ -54,6 +69,9 @@ export default function StudySelectScreen() {
   const [selectedList, setSelectedList] = useState<string | null>(null);
   const [lists, setLists] = useState<ListItem[]>([]);
   const [dueCount, setDueCount] = useState(0);
+  const [favCount, setFavCount] = useState(0);
+  const [wordCount, setWordCount] = useState('all');
+  const [shuffleOn, setShuffleOn] = useState(true);
 
   useFocusEffect(useCallback(() => {
     setStep('list');
@@ -73,6 +91,7 @@ export default function StudySelectScreen() {
       );
       setLists([...defaults, ...customItems]);
       setDueCount(await countDueWords());
+      setFavCount((await loadFavRefs()).length);
     }
     loadLists();
   }, []));
@@ -128,6 +147,22 @@ export default function StudySelectScreen() {
                 <SymbolView name="chevron.right" size={14} tintColor={Colors.warning} type="monochrome" />
               </TouchableOpacity>
             )}
+            {favCount > 0 && (
+              <TouchableOpacity
+                style={s.favCard}
+                onPress={() => { setSelectedList('_fav'); setStep('mode'); }}
+                activeOpacity={0.85}
+              >
+                <View style={s.favIcon}>
+                  <SymbolView name="star.fill" size={20} tintColor="#F59E0B" type="monochrome" />
+                </View>
+                <View style={s.listInfo}>
+                  <Text style={s.dueName}>Favorilerim</Text>
+                  <Text style={s.favCountText}>{favCount} yıldızlı kelime</Text>
+                </View>
+                <SymbolView name="chevron.right" size={14} tintColor="#F59E0B" type="monochrome" />
+              </TouchableOpacity>
+            )}
             <Text style={s.sectionLabel}>Hangi listeden çalışacaksın?</Text>
             {lists.map((list) => (
               <TouchableOpacity
@@ -149,6 +184,33 @@ export default function StudySelectScreen() {
           </>
         ) : (
           <>
+            {/* Oturum ayarları */}
+            <View style={s.settingsCard}>
+              <View style={s.settingsRow}>
+                <Text style={s.settingsLabel}>Kelime sayısı</Text>
+                <View style={s.segmentWrap}>
+                  {COUNT_OPTIONS.map(opt => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[s.segment, wordCount === opt.value && s.segmentActive]}
+                      onPress={() => setWordCount(opt.value)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[s.segmentText, wordCount === opt.value && s.segmentTextActive]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={s.settingsDivider} />
+              <TouchableOpacity style={s.settingsRow} onPress={() => setShuffleOn(v => !v)} activeOpacity={0.75}>
+                <Text style={s.settingsLabel}>Karıştır</Text>
+                <View style={[s.shuffleBadge, shuffleOn && s.shuffleBadgeOn]}>
+                  <SymbolView name="shuffle" size={13} tintColor={shuffleOn ? '#fff' : Colors.textMuted} type="monochrome" />
+                  <Text style={[s.shuffleText, shuffleOn && s.shuffleTextOn]}>{shuffleOn ? 'Açık' : 'Kapalı'}</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
             <Text style={s.sectionLabel}>Nasıl çalışmak istiyorsun?</Text>
             {MODES.map((mode) => (
               <TouchableOpacity
@@ -158,8 +220,12 @@ export default function StudySelectScreen() {
                   const dest = mode.id === 'quiz'     ? '/study/quiz'
                             : mode.id === 'typing'   ? '/study/typing'
                             : mode.id === 'speaking' ? '/study/speaking'
+                            : mode.id === 'matching' ? '/study/matching'
                             : '/study/flashcard';
-                  router.push({ pathname: dest as any, params: { listId: selectedList } });
+                  router.push({
+                    pathname: dest as any,
+                    params: { listId: selectedList, count: wordCount, shuffle: shuffleOn ? '1' : '0' },
+                  });
                 }}
                 activeOpacity={0.8}
               >
@@ -252,6 +318,41 @@ const s = StyleSheet.create({
   },
   dueName: { color: Colors.textPrimary, fontSize: 15, fontWeight: '800', marginBottom: 3 },
   dueCountText: { color: Colors.warning, fontSize: 12, fontWeight: '600' },
+
+  favCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#F59E0B50',
+    marginBottom: 6,
+  },
+  favIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    backgroundColor: '#F59E0B20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  favCountText: { color: '#D97706', fontSize: 12, fontWeight: '600' },
+
+  settingsCard: { backgroundColor: Colors.bgCard, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 6, borderWidth: 1, borderColor: Colors.border },
+  settingsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
+  settingsLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  settingsDivider: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.borderLight },
+  segmentWrap: { flexDirection: 'row', backgroundColor: Colors.bgSubtle, borderRadius: 10, padding: 3, gap: 2 },
+  segment: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
+  segmentActive: { backgroundColor: Colors.primary },
+  segmentText: { fontSize: 12, fontWeight: '700', color: Colors.textMuted },
+  segmentTextActive: { color: '#fff' },
+  shuffleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.bgSubtle, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 },
+  shuffleBadgeOn: { backgroundColor: Colors.primary },
+  shuffleText: { fontSize: 12, fontWeight: '700', color: Colors.textMuted },
+  shuffleTextOn: { color: '#fff' },
   listIcon: {
     width: 46,
     height: 46,

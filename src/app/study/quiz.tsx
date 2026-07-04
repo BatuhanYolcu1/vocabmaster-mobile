@@ -10,6 +10,7 @@ import Animated, {
 import { Colors } from '../../constants/colors';
 import { Fonts } from '../../constants/typography';
 import { loadStudyWords, StudyWord } from '../../data/demoWords';
+import { prepareWords } from '../../lib/session';
 import { recordSession } from '../../lib/stats';
 import { StudyEmpty } from '../../components/study-empty';
 import { StudySkeleton } from '../../components/skeleton';
@@ -71,7 +72,7 @@ function OptionBtn({ label, state, onPress }: { label: string; state: OptionStat
 }
 
 export default function QuizScreen() {
-  const { listId } = useLocalSearchParams<{ listId?: string }>();
+  const { listId, count, shuffle } = useLocalSearchParams<{ listId?: string; count?: string; shuffle?: string }>();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex]     = useState(0);
@@ -85,12 +86,13 @@ export default function QuizScreen() {
 
   useEffect(() => {
     loadStudyWords(listId).then(w => {
-      wordsRef.current = w;
-      setQuestions(buildQuestions(w));
+      const prepared = prepareWords(w, { count, shuffle });
+      wordsRef.current = prepared;
+      setQuestions(buildQuestions(prepared));
       setLoading(false);
     });
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [listId]);
+  }, [listId, count, shuffle]);
 
   const cardY    = useSharedValue(40);
   const cardOpac = useSharedValue(0);

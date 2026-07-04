@@ -33,10 +33,13 @@ export default function RootLayout() {
         <Stack.Screen name="study/quiz" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="study/typing"   options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="study/speaking" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="study/matching" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="words/[listId]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="words/detail" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="words/add" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="words/new-list" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="words/import" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="settings/backup" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings/notifications" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings/privacy" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings/help" options={{ animation: 'slide_from_right' }} />

@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/colors';
 import { Fonts } from '../../constants/typography';
 import { loadStudyWords, StudyWord } from '../../data/demoWords';
+import { prepareWords } from '../../lib/session';
 import { recordSession, saveSRSCard } from '../../lib/stats';
 import { StudyEmpty } from '../../components/study-empty';
 import { StudySkeleton } from '../../components/skeleton';
@@ -47,7 +48,7 @@ function RatingBtn({ label, sub, color, bg, onPress }: { label: string; sub: str
 }
 
 export default function FlashcardScreen() {
-  const { listId, wordId } = useLocalSearchParams<{ listId?: string; wordId?: string }>();
+  const { listId, wordId, count, shuffle } = useLocalSearchParams<{ listId?: string; wordId?: string; count?: string; shuffle?: string }>();
   const [words, setWords] = useState<StudyWord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,10 +72,10 @@ export default function FlashcardScreen() {
 
   useEffect(() => {
     loadStudyWords(listId).then(w => {
-      setWords(wordId ? w.filter(x => x.id === wordId) : w);
+      setWords(wordId ? w.filter(x => x.id === wordId) : prepareWords(w, { count, shuffle }));
       setLoading(false);
     });
-  }, [listId, wordId]);
+  }, [listId, wordId, count, shuffle]);
 
   const word        = words[index];
   const accentColor = WORD_COLORS[index % WORD_COLORS.length];

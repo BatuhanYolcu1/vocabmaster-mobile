@@ -9,10 +9,12 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay,
   withRepeat, withSequence, Easing,
 } from 'react-native-reanimated';
+import * as Speech from 'expo-speech';
 import { Colors } from '../../constants/colors';
 import { Fonts } from '../../constants/typography';
 import { loadDashboardStats } from '../../lib/stats';
 import { DEFAULT_LISTS } from '../../data/demoWords';
+import { wordOfTheDay } from '../../lib/wordOfDay';
 import { CountUp } from '../../components/anim';
 
 function timeGreeting(): string {
@@ -58,6 +60,7 @@ const QUICK_MODES = [
   { title: 'Quiz',      symbol: 'checkmark.circle.fill',       color: Colors.green,    bg: Colors.greenLight,   dest: '/study/quiz'      },
   { title: 'Yazarak',   symbol: 'keyboard.fill',               color: Colors.purple,   bg: Colors.purpleLight,  dest: '/study/typing'    },
   { title: 'Konuşma',   symbol: 'mic.fill',                    color: '#EC4899',       bg: '#FDF2F8',           dest: '/study/speaking'  },
+  { title: 'Eşleştir',  symbol: 'squares.leading.rectangle',   color: Colors.blue,     bg: Colors.blueLight,    dest: '/study/matching'  },
 ];
 
 type Stats = {
@@ -80,9 +83,10 @@ export default function DashboardScreen() {
   const [randomListName, setRandomListName] = useState('B1 Temel Kelimeler');
 
   const loadAll = useCallback(async () => {
-    const [nameVal, raw, s] = await Promise.all([
+    const [nameVal, raw, preferred, s] = await Promise.all([
       AsyncStorage.getItem('user_name'),
       AsyncStorage.getItem('custom_lists'),
+      AsyncStorage.getItem('preferred_list'),
       loadDashboardStats(),
     ]);
 
@@ -94,7 +98,10 @@ export default function DashboardScreen() {
       ...DEFAULT_LISTS.map(l => ({ id: l.id, name: l.name })),
       ...custom.map(l => ({ id: l.id, name: l.name })),
     ];
-    const picked = all[Math.floor(Math.random() * all.length)];
+    // Seviye tercihine uyan liste havuzda 3 kat ağırlıklı
+    const favored = all.find(l => l.id === preferred);
+    const pool = favored ? [...all, favored, favored] : all;
+    const picked = pool[Math.floor(Math.random() * pool.length)];
     setRandomListId(picked.id);
     setRandomListName(picked.name);
   }, []);
@@ -126,6 +133,7 @@ export default function DashboardScreen() {
 
   const dailyPct = Math.min((stats.todayWords / stats.dailyGoal) * 100, 100);
   const maxXp    = Math.max(...stats.weeklyXp.map(d => d.xp), 1);
+  const dailyWord = wordOfTheDay();
 
   // Günlük hedef barı animasyonlu dolar
   const progressW = useSharedValue(0);
@@ -190,6 +198,31 @@ export default function DashboardScreen() {
             </View>
           </View>
         )}
+
+        {/* Günün Kelimesi */}
+        <TouchableOpacity
+          style={styles.wodCard}
+          onPress={() => router.push({ pathname: '/words/detail' as any, params: { listId: dailyWord.listId, wordId: dailyWord.id } })}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={['#7C3AED', Colors.primary]}
+            start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+            style={styles.wodStrip}
+          />
+          <View style={styles.wodBody}>
+            <Text style={styles.wodLabel}>GÜNÜN KELİMESİ</Text>
+            <Text style={styles.wodWord}>{dailyWord.word}</Text>
+            <Text style={styles.wodTr}>{dailyWord.tr}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.wodListen}
+            onPress={() => Speech.speak(dailyWord.word, { language: 'en-US', rate: 0.85 })}
+            activeOpacity={0.75}
+          >
+            <SymbolView name="speaker.wave.2.fill" size={16} tintColor={Colors.primary} type="monochrome" />
+          </TouchableOpacity>
+        </TouchableOpacity>
 
         {/* Streak risk uyarısı */}
         {stats.streak > 0 && !stats.studiedToday && (
@@ -357,6 +390,14 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
   statChevron: { position: 'absolute', top: 14, right: 12 },
 
+  wodCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.bgCard, borderRadius: 16, marginBottom: 16, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  wodStrip: { width: 5, alignSelf: 'stretch' },
+  wodBody: { flex: 1, paddingVertical: 14, paddingHorizontal: 16, gap: 2 },
+  wodLabel: { fontSize: 9, fontWeight: '800', color: Colors.primary, letterSpacing: 1.4 },
+  wodWord: { fontSize: 20, fontFamily: Fonts.headingBlack, color: Colors.textPrimary, letterSpacing: -0.3 },
+  wodTr: { fontSize: 13, color: Colors.textSecondary },
+  wodListen: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+
   riskBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.warningLight, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, marginBottom: 16, borderWidth: 1, borderColor: Colors.warning + '40' },
   riskTitle: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
   riskSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 2, lineHeight: 15 },
@@ -382,7 +423,7 @@ const styles = StyleSheet.create({
   sectionTitle: { color: Colors.textPrimary, fontWeight: '700', fontSize: 16 },
   sectionSub: { color: Colors.textMuted, fontSize: 12, marginBottom: 12, marginTop: 3 },
   modeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  modeCard: { width: '47.5%', backgroundColor: Colors.bgCard, borderRadius: 14, padding: 16, alignItems: 'center', gap: 10, borderTopWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
-  modeIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  modeTitle: { fontSize: 12, fontWeight: '700' },
+  modeCard: { width: '30.8%', backgroundColor: Colors.bgCard, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 6, alignItems: 'center', gap: 8, borderTopWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+  modeIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  modeTitle: { fontSize: 11, fontWeight: '700' },
 });

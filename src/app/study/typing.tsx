@@ -15,6 +15,7 @@ import Animated, {
 import { Colors } from '../../constants/colors';
 import { Fonts } from '../../constants/typography';
 import { loadStudyWords, StudyWord } from '../../data/demoWords';
+import { prepareWords } from '../../lib/session';
 import { recordSession } from '../../lib/stats';
 import { StudyEmpty } from '../../components/study-empty';
 import { StudySkeleton } from '../../components/skeleton';
@@ -33,7 +34,7 @@ function normalize(s: string) {
 }
 
 export default function TypingScreen() {
-  const { listId } = useLocalSearchParams<{ listId?: string }>();
+  const { listId, count, shuffle } = useLocalSearchParams<{ listId?: string; count?: string; shuffle?: string }>();
   const [words, setWords] = useState<StudyWord[]>([]);
   const [loading, setLoading] = useState(true);
   const [index,  setIndex]  = useState(0);
@@ -48,9 +49,9 @@ export default function TypingScreen() {
   const sessionSaved = useRef(false);
 
   useEffect(() => {
-    loadStudyWords(listId).then(w => { setWords(w); setLoading(false); });
+    loadStudyWords(listId).then(w => { setWords(prepareWords(w, { count, shuffle })); setLoading(false); });
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [listId]);
+  }, [listId, count, shuffle]);
 
   const word        = words[index];
   const accentColor = WORD_COLORS[index % WORD_COLORS.length];
