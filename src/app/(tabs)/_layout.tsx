@@ -54,7 +54,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="leaderboard"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="chart.bar.fill" /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="medal.fill" /> }}
       />
       <Tabs.Screen
         name="profile"

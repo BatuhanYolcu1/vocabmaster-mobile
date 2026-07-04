@@ -4,25 +4,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/colors';
+import { Fonts } from '../../constants/typography';
+import { loadAchievements, Achievement } from '../../lib/achievements';
+import { loadMonthlyActivity } from '../../lib/stats';
+import { SpringIn } from '../../components/anim';
 
-function Avatar({ name, color, size = 44 }: { name: string; color: string; size?: number }) {
-  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  return (
-    <View style={[av.circle, { width: size, height: size, borderRadius: size / 2, backgroundColor: color + '18', borderColor: color + '40' }]}>
-      <Text style={[av.text, { color, fontSize: size * 0.33 }]}>{initials}</Text>
-    </View>
-  );
+function heatColor(xp: number): string {
+  if (xp === 0) return Colors.borderLight;
+  if (xp < 50) return Colors.primarySoft;
+  if (xp < 150) return '#8B7CF8';
+  return Colors.primary;
 }
-const av = StyleSheet.create({
-  circle: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
-  text: { fontWeight: '800' },
-});
 
-export default function LeaderboardScreen() {
-  const [myXp, setMyXp]       = useState(0);
+export default function AchievementsScreen() {
+  const [myXp, setMyXp]         = useState(0);
   const [myStreak, setMyStreak] = useState(0);
-  const [myName, setMyName]   = useState('Sen');
+  const [myName, setMyName]     = useState('Sen');
+  const [badges, setBadges]     = useState<Achievement[]>([]);
+  const [activity, setActivity] = useState<{ date: string; xp: number }[]>([]);
 
   useFocusEffect(useCallback(() => {
     AsyncStorage.multiGet(['stats_total_xp', 'stats_streak', 'user_name']).then(pairs => {
@@ -31,84 +32,96 @@ export default function LeaderboardScreen() {
       setMyStreak(parseInt(m.stats_streak ?? '0'));
       if (m.user_name) setMyName(m.user_name);
     });
+    loadAchievements().then(setBadges);
+    loadMonthlyActivity().then(setActivity);
   }, []));
+
+  const earnedCount = badges.filter(b => b.earned).length;
+  const activeDays = activity.filter(d => d.xp > 0).length;
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.title}>Liderlik Tablosu</Text>
-        <Text style={s.subtitle}>Kendi ilerlemenizi takip edin</Text>
+        <Text style={s.title}>Başarımlar</Text>
+        <Text style={s.subtitle}>{earnedCount} / {badges.length} rozet kazanıldı</Text>
       </View>
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
-        {/* Coming soon banner */}
-        <View style={s.comingBanner}>
-          <SymbolView name="person.2.fill" size={22} tintColor={Colors.primary} type="monochrome" />
-          <View style={s.comingInfo}>
-            <Text style={s.comingTitle}>Çok Oyunculu Mod Yakında</Text>
-            <Text style={s.comingSub}>Arkadaşlarınla rekabet etmek için güncellemeyi bekle!</Text>
-          </View>
-        </View>
-
-        {/* User's own stats — prominent card */}
-        <View style={s.meCard}>
-          <View style={s.meTop}>
-            <View style={s.meMedal}>
-              <SymbolView name="trophy.fill" size={20} tintColor={Colors.warning} type="monochrome" />
-            </View>
-            <Avatar name={myName} color={Colors.primary} size={52} />
-            <View style={s.meMedal} />
-          </View>
+        {/* Me card */}
+        <LinearGradient
+          colors={[Colors.primary, '#7C3AED']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={s.meCard}
+        >
           <Text style={s.meName}>{myName}</Text>
           <Text style={s.meXp}>{myXp.toLocaleString()} XP</Text>
           <View style={s.meStatsRow}>
             <View style={s.meStat}>
-              <SymbolView name="flame.fill" size={14} tintColor={Colors.accent} type="monochrome" />
+              <SymbolView name="flame.fill" size={14} tintColor="#fff" type="monochrome" />
               <Text style={s.meStatVal}>{myStreak}</Text>
-              <Text style={s.meStatLabel}>Günlük Seri</Text>
+              <Text style={s.meStatLabel}>Seri</Text>
             </View>
             <View style={s.meStatDivider} />
             <View style={s.meStat}>
-              <SymbolView name="bolt.fill" size={14} tintColor={Colors.primary} type="monochrome" />
-              <Text style={s.meStatVal}>{myXp.toLocaleString()}</Text>
-              <Text style={s.meStatLabel}>Toplam XP</Text>
+              <SymbolView name="medal.fill" size={14} tintColor="#fff" type="monochrome" />
+              <Text style={s.meStatVal}>{earnedCount}</Text>
+              <Text style={s.meStatLabel}>Rozet</Text>
             </View>
             <View style={s.meStatDivider} />
             <View style={s.meStat}>
-              <SymbolView name="star.fill" size={14} tintColor={Colors.warning} type="monochrome" />
+              <SymbolView name="star.fill" size={14} tintColor="#fff" type="monochrome" />
               <Text style={s.meStatVal}>{Math.floor(myXp / 1000) + 1}</Text>
               <Text style={s.meStatLabel}>Seviye</Text>
             </View>
           </View>
+        </LinearGradient>
+
+        {/* Rozet grid */}
+        <Text style={s.sectionTitle}>Rozetler</Text>
+        <View style={s.badgeGrid}>
+          {badges.map((b, i) => (
+            <SpringIn key={b.id} delay={i * 40} style={s.badgeCell}>
+              <View style={[s.badgeCard, !b.earned && s.badgeCardLocked]}>
+                <View style={[s.badgeIcon, { backgroundColor: b.earned ? b.color + '1C' : Colors.borderLight }]}>
+                  <SymbolView
+                    name={(b.earned ? b.icon : 'lock.fill') as any}
+                    size={22}
+                    tintColor={b.earned ? b.color : Colors.textMuted}
+                    type="monochrome"
+                  />
+                </View>
+                <Text style={[s.badgeTitle, b.earned && { color: b.color }]} numberOfLines={1}>{b.title}</Text>
+                <Text style={s.badgeDesc} numberOfLines={2}>{b.desc}</Text>
+                {!b.earned && (
+                  <View style={s.badgeTrack}>
+                    <View style={[s.badgeFill, { width: `${Math.round(b.progress * 100)}%` as any }]} />
+                  </View>
+                )}
+              </View>
+            </SpringIn>
+          ))}
         </View>
 
-        {/* Motivational milestones */}
-        <Text style={s.sectionTitle}>XP Kilometre Taşları</Text>
-        {[
-          { xp: 100,  label: 'Başlangıç',   icon: 'star.fill',       color: Colors.textMuted },
-          { xp: 500,  label: 'Öğrenci',      icon: 'book.fill',       color: Colors.green     },
-          { xp: 1000, label: 'Azimli',        icon: 'flame.fill',      color: Colors.accent    },
-          { xp: 2500, label: 'Uzman',          icon: 'graduationcap.fill', color: Colors.purple },
-          { xp: 5000, label: 'Usta',           icon: 'trophy.fill',     color: Colors.warning   },
-        ].map(ms => {
-          const reached = myXp >= ms.xp;
-          return (
-            <View key={ms.xp} style={[s.msRow, reached && s.msRowReached]}>
-              <View style={[s.msIcon, { backgroundColor: reached ? ms.color + '20' : Colors.borderLight }]}>
-                <SymbolView name={ms.icon as any} size={16} tintColor={reached ? ms.color : Colors.textMuted} type="monochrome" />
-              </View>
-              <View style={s.msInfo}>
-                <Text style={[s.msLabel, reached && { color: ms.color }]}>{ms.label}</Text>
-                <Text style={s.msSub}>{ms.xp.toLocaleString()} XP</Text>
-              </View>
-              {reached
-                ? <SymbolView name="checkmark.circle.fill" size={20} tintColor={ms.color} type="monochrome" />
-                : <Text style={s.msRemain}>{(ms.xp - myXp).toLocaleString()} kaldı</Text>
-              }
+        {/* Aylık ısı haritası */}
+        <Text style={s.sectionTitle}>Son 30 Gün</Text>
+        <View style={s.heatCard}>
+          <View style={s.heatGrid}>
+            {activity.map((d) => (
+              <View key={d.date} style={[s.heatBox, { backgroundColor: heatColor(d.xp) }]} />
+            ))}
+          </View>
+          <View style={s.heatFooter}>
+            <Text style={s.heatInfo}>{activeDays} aktif gün</Text>
+            <View style={s.heatLegend}>
+              <Text style={s.heatLegendText}>Az</Text>
+              {[Colors.borderLight, Colors.primarySoft, '#8B7CF8', Colors.primary].map((c, i) => (
+                <View key={i} style={[s.heatLegendBox, { backgroundColor: c }]} />
+              ))}
+              <Text style={s.heatLegendText}>Çok</Text>
             </View>
-          );
-        })}
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -117,32 +130,47 @@ export default function LeaderboardScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
+  title: { fontSize: 26, fontFamily: Fonts.headingBlack, color: Colors.textPrimary, letterSpacing: -0.5 },
   subtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 3 },
   content: { padding: 20, paddingBottom: 120, gap: 12 },
 
-  comingBanner: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: Colors.primaryLight, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.primarySoft },
-  comingInfo: { flex: 1 },
-  comingTitle: { color: Colors.primary, fontWeight: '700', fontSize: 14 },
-  comingSub: { color: Colors.textSecondary, fontSize: 12, marginTop: 2, lineHeight: 17 },
+  meCard: {
+    borderRadius: 20, padding: 20, alignItems: 'center', gap: 4,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 5,
+  },
+  meName: { fontSize: 18, fontFamily: Fonts.heading, color: '#fff' },
+  meXp: { fontSize: 32, fontFamily: Fonts.headingBlack, color: '#fff', letterSpacing: -1 },
+  meStatsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 18 },
+  meStat: { alignItems: 'center', gap: 3, minWidth: 56 },
+  meStatVal: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  meStatLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 10, fontWeight: '600' },
+  meStatDivider: { width: StyleSheet.hairlineWidth, height: 30, backgroundColor: 'rgba(255,255,255,0.3)' },
 
-  meCard: { backgroundColor: Colors.bgCard, borderRadius: 20, padding: 20, alignItems: 'center', gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3, borderWidth: 1.5, borderColor: Colors.primarySoft },
-  meTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  meMedal: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  meName: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
-  meXp: { fontSize: 32, fontWeight: '900', color: Colors.primary, letterSpacing: -1 },
-  meStatsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  meStat: { flex: 1, alignItems: 'center', gap: 4 },
-  meStatVal: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
-  meStatLabel: { fontSize: 10, color: Colors.textMuted, fontWeight: '500' },
-  meStatDivider: { width: StyleSheet.hairlineWidth, height: 36, backgroundColor: Colors.borderLight },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginTop: 8 },
 
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginTop: 4 },
-  msRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.bgCard, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: Colors.border },
-  msRowReached: { borderColor: Colors.borderLight },
-  msIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  msInfo: { flex: 1 },
-  msLabel: { fontSize: 14, fontWeight: '700', color: Colors.textMuted },
-  msSub: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
-  msRemain: { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
+  badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  badgeCell: { width: '30.8%' },
+  badgeCard: {
+    backgroundColor: Colors.bgCard, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 8,
+    alignItems: 'center', gap: 5, minHeight: 120,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
+  },
+  badgeCardLocked: { opacity: 0.72 },
+  badgeIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  badgeTitle: { fontSize: 12, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center' },
+  badgeDesc: { fontSize: 9.5, color: Colors.textMuted, textAlign: 'center', lineHeight: 13 },
+  badgeTrack: { width: '85%', height: 4, backgroundColor: Colors.borderLight, borderRadius: 2, overflow: 'hidden', marginTop: 2 },
+  badgeFill: { height: '100%', backgroundColor: Colors.primarySoft, borderRadius: 2 },
+
+  heatCard: {
+    backgroundColor: Colors.bgCard, borderRadius: 16, padding: 16, gap: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
+  },
+  heatGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+  heatBox: { width: 26, height: 26, borderRadius: 7 },
+  heatFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heatInfo: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+  heatLegend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  heatLegendBox: { width: 12, height: 12, borderRadius: 3.5 },
+  heatLegendText: { fontSize: 10, color: Colors.textMuted },
 });

@@ -159,6 +159,20 @@ export async function loadProfileStats() {
   };
 }
 
+// Son 30 gün, en eski → bugün sıralı (ısı haritası için)
+export async function loadMonthlyActivity(): Promise<{ date: string; xp: number }[]> {
+  const raw = await AsyncStorage.getItem('stats_daily_xp');
+  const dailyXp: Record<string, number> = raw ? JSON.parse(raw) : {};
+  const days: { date: string; xp: number }[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = d.toISOString().split('T')[0];
+    days.push({ date: ds, xp: dailyXp[ds] ?? 0 });
+  }
+  return days;
+}
+
 export async function countDueWords(): Promise<number> {
   try {
     const keys = await AsyncStorage.getAllKeys();
