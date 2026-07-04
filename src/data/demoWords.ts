@@ -191,6 +191,131 @@ export const DEFAULT_LISTS: DefaultList[] = [
       { id: '25', word: 'Round trip',     tr: 'Gidiş-dönüş',      def: 'Hem gidiş hem dönüş yolculuğunu kapsayan',        example: 'I booked a round trip to London.',           exampleTr: 'Londra\'ya gidiş-dönüş bilet aldım.',            type: 'noun' },
     ],
   },
+  {
+    id: '5', name: 'YDS Kelimeleri', color: '#EF4444', bg: '#FEF2F2', symbol: 'checklist',
+    words: [
+      { id: '1',  word: 'Comprehensive', tr: 'Kapsamlı',          def: 'Her yönüyle eksiksiz olan',                       example: 'The report offers a comprehensive analysis.',       exampleTr: 'Rapor kapsamlı bir analiz sunuyor.',                  type: 'adjective' },
+      { id: '2',  word: 'Assess',        tr: 'Değerlendirmek',    def: 'Bir şeyin değerini veya niteliğini ölçmek',       example: 'Teachers assess students regularly.',               exampleTr: 'Öğretmenler öğrencileri düzenli değerlendirir.',      type: 'verb' },
+      { id: '3',  word: 'Notwithstanding', tr: 'Rağmen',          def: 'Bir engele veya duruma karşın',                   example: 'Notwithstanding the risks, they proceeded.',        exampleTr: 'Risklere rağmen devam ettiler.',                      type: 'adverb' },
+      { id: '4',  word: 'Implication',   tr: 'Sonuç, ima',        def: 'Bir eylemin dolaylı sonucu veya iması',           example: 'The decision has serious implications.',            exampleTr: 'Kararın ciddi sonuçları var.',                        type: 'noun' },
+      { id: '5',  word: 'Substantial',   tr: 'Önemli, büyük',     def: 'Miktar veya değer olarak büyük',                  example: 'They made substantial progress.',                   exampleTr: 'Önemli ilerleme kaydettiler.',                        type: 'adjective' },
+      { id: '6',  word: 'Constrain',     tr: 'Kısıtlamak',        def: 'Bir şeyin serbestliğini sınırlamak',              example: 'Budget cuts constrain our options.',                exampleTr: 'Bütçe kesintileri seçeneklerimizi kısıtlıyor.',       type: 'verb' },
+      { id: '7',  word: 'Prevalent',     tr: 'Yaygın',            def: 'Belirli bir yerde/zamanda sık görülen',           example: 'This view is prevalent among experts.',             exampleTr: 'Bu görüş uzmanlar arasında yaygın.',                  type: 'adjective' },
+      { id: '8',  word: 'Deteriorate',   tr: 'Kötüleşmek',        def: 'Giderek daha kötü hale gelmek',                   example: 'His health began to deteriorate.',                  exampleTr: 'Sağlığı kötüleşmeye başladı.',                        type: 'verb' },
+      { id: '9',  word: 'Attribute',     tr: 'Atfetmek',          def: 'Bir şeyin nedenini bir kaynağa bağlamak',         example: 'She attributes her success to hard work.',          exampleTr: 'Başarısını sıkı çalışmaya atfediyor.',                type: 'verb' },
+      { id: '10', word: 'Consecutive',   tr: 'Ardışık',           def: 'Kesintisiz birbirini izleyen',                    example: 'It rained for five consecutive days.',              exampleTr: 'Beş gün ardışık yağmur yağdı.',                       type: 'adjective' },
+      { id: '11', word: 'Undermine',     tr: 'Baltalamak',        def: 'Gizliden zayıflatmak',                            example: 'Rumors can undermine trust.',                       exampleTr: 'Söylentiler güveni baltalayabilir.',                  type: 'verb' },
+      { id: '12', word: 'Profound',      tr: 'Derin',             def: 'Çok güçlü ve etkileyici',                         example: 'The book had a profound effect on me.',             exampleTr: 'Kitap üzerimde derin bir etki bıraktı.',              type: 'adjective' },
+      { id: '13', word: 'Facilitate',    tr: 'Kolaylaştırmak',    def: 'Bir sürecin gerçekleşmesini kolay hale getirmek', example: 'Technology facilitates communication.',             exampleTr: 'Teknoloji iletişimi kolaylaştırır.',                  type: 'verb' },
+      { id: '14', word: 'Adverse',       tr: 'Olumsuz',           def: 'Zarar verici veya elverişsiz',                    example: 'The drug has adverse side effects.',                exampleTr: 'İlacın olumsuz yan etkileri var.',                    type: 'adjective' },
+      { id: '15', word: 'Compensate',    tr: 'Telafi etmek',      def: 'Bir kaybı dengelemek veya karşılamak',            example: 'Nothing can compensate for lost time.',             exampleTr: 'Hiçbir şey kaybedilen zamanı telafi edemez.',         type: 'verb' },
+      { id: '16', word: 'Deliberately',  tr: 'Kasıtlı olarak',    def: 'Bilerek ve isteyerek',                            example: 'He deliberately ignored the warning.',              exampleTr: 'Uyarıyı kasıtlı olarak görmezden geldi.',             type: 'adverb' },
+      { id: '17', word: 'Diminish',      tr: 'Azalmak',           def: 'Boyut veya önem olarak küçülmek',                 example: 'Interest in the topic has diminished.',             exampleTr: 'Konuya ilgi azaldı.',                                 type: 'verb' },
+      { id: '18', word: 'Explicit',      tr: 'Açık, net',         def: 'Hiçbir belirsizliğe yer bırakmayan',              example: 'The instructions were explicit.',                   exampleTr: 'Talimatlar açıktı.',                                  type: 'adjective' },
+      { id: '19', word: 'Hinder',        tr: 'Engellemek',        def: 'İlerlemeyi zorlaştırmak',                         example: 'Bad weather hindered the rescue.',                  exampleTr: 'Kötü hava kurtarmayı engelledi.',                     type: 'verb' },
+      { id: '20', word: 'Inevitable',    tr: 'Kaçınılmaz',        def: 'Önlenmesi mümkün olmayan',                        example: 'Change is inevitable.',                             exampleTr: 'Değişim kaçınılmazdır.',                              type: 'adjective' },
+      { id: '21', word: 'Justify',       tr: 'Haklı çıkarmak',    def: 'Bir şeyin doğruluğunu gerekçelendirmek',          example: 'The results justify our approach.',                 exampleTr: 'Sonuçlar yaklaşımımızı haklı çıkarıyor.',             type: 'verb' },
+      { id: '22', word: 'Legitimate',    tr: 'Meşru',             def: 'Yasalara veya kurallara uygun',                   example: 'She has a legitimate claim.',                       exampleTr: 'Meşru bir talebi var.',                               type: 'adjective' },
+      { id: '23', word: 'Mutual',        tr: 'Karşılıklı',        def: 'İki taraf için de geçerli olan',                  example: 'They share a mutual respect.',                      exampleTr: 'Karşılıklı saygıları var.',                           type: 'adjective' },
+      { id: '24', word: 'Neglect',       tr: 'İhmal etmek',       def: 'Gereken ilgiyi göstermemek',                      example: 'Do not neglect your health.',                       exampleTr: 'Sağlığını ihmal etme.',                               type: 'verb' },
+      { id: '25', word: 'Obstacle',      tr: 'Engel',             def: 'İlerlemeyi zorlaştıran şey',                      example: 'Fear is the biggest obstacle.',                     exampleTr: 'Korku en büyük engeldir.',                            type: 'noun' },
+      { id: '26', word: 'Persuade',      tr: 'İkna etmek',        def: 'Birini bir şeye inandırmak',                      example: 'She persuaded him to stay.',                        exampleTr: 'Onu kalmaya ikna etti.',                              type: 'verb' },
+      { id: '27', word: 'Reluctant',     tr: 'İsteksiz',          def: 'Bir şeyi yapmaya gönülsüz',                       example: 'He was reluctant to answer.',                       exampleTr: 'Cevap vermeye isteksizdi.',                           type: 'adjective' },
+      { id: '28', word: 'Sustain',       tr: 'Sürdürmek',         def: 'Bir şeyi devam ettirmek',                         example: 'We must sustain economic growth.',                  exampleTr: 'Ekonomik büyümeyi sürdürmeliyiz.',                    type: 'verb' },
+      { id: '29', word: 'Transition',    tr: 'Geçiş',             def: 'Bir durumdan diğerine geçme süreci',              example: 'The transition to democracy took years.',           exampleTr: 'Demokrasiye geçiş yıllar aldı.',                      type: 'noun' },
+      { id: '30', word: 'Ultimately',    tr: 'Nihayetinde',       def: 'En sonunda, sonuç olarak',                        example: 'Ultimately, the choice is yours.',                  exampleTr: 'Nihayetinde seçim senin.',                            type: 'adverb' },
+      { id: '31', word: 'Vulnerable',    tr: 'Savunmasız',        def: 'Kolayca zarar görebilen',                         example: 'Children are vulnerable to advertising.',           exampleTr: 'Çocuklar reklamlara karşı savunmasızdır.',            type: 'adjective' },
+      { id: '32', word: 'Widespread',    tr: 'Yaygın',            def: 'Geniş bir alana yayılmış',                        example: 'The disease caused widespread panic.',              exampleTr: 'Hastalık yaygın paniğe yol açtı.',                    type: 'adjective' },
+      { id: '33', word: 'Yield',         tr: 'Vermek, üretmek',   def: 'Sonuç veya ürün ortaya çıkarmak',                 example: 'The research yielded surprising results.',          exampleTr: 'Araştırma şaşırtıcı sonuçlar verdi.',                 type: 'verb' },
+      { id: '34', word: 'Allocate',      tr: 'Tahsis etmek',      def: 'Belirli bir amaca kaynak ayırmak',                example: 'Funds were allocated for education.',               exampleTr: 'Eğitim için kaynak tahsis edildi.',                   type: 'verb' },
+      { id: '35', word: 'Coincide',      tr: 'Denk gelmek',       def: 'Aynı zamanda gerçekleşmek',                       example: 'Her visit coincided with the festival.',            exampleTr: 'Ziyareti festivale denk geldi.',                      type: 'verb' },
+      { id: '36', word: 'Density',       tr: 'Yoğunluk',          def: 'Birim alandaki miktar',                           example: 'The population density is high here.',              exampleTr: 'Burada nüfus yoğunluğu yüksek.',                      type: 'noun' },
+      { id: '37', word: 'Emerge',        tr: 'Ortaya çıkmak',     def: 'Görünür veya bilinir hale gelmek',                example: 'New evidence emerged during the trial.',            exampleTr: 'Dava sırasında yeni kanıt ortaya çıktı.',             type: 'verb' },
+      { id: '38', word: 'Fluctuate',     tr: 'Dalgalanmak',       def: 'Düzensiz biçimde artıp azalmak',                  example: 'Prices fluctuate with demand.',                     exampleTr: 'Fiyatlar taleple dalgalanır.',                        type: 'verb' },
+      { id: '39', word: 'Incentive',     tr: 'Teşvik',            def: 'Bir davranışı özendiren şey',                     example: 'Tax cuts are an incentive to invest.',              exampleTr: 'Vergi indirimleri yatırım teşvikidir.',               type: 'noun' },
+      { id: '40', word: 'Perceive',      tr: 'Algılamak',         def: 'Fark etmek, kavramak',                            example: 'People perceive risk differently.',                 exampleTr: 'İnsanlar riski farklı algılar.',                      type: 'verb' },
+    ],
+  },
+  {
+    id: '6', name: 'Phrasal Verbs', color: '#06B6D4', bg: '#ECFEFF', symbol: 'arrow.triangle.branch',
+    words: [
+      { id: '1',  word: 'Give up',      tr: 'Vazgeçmek',            def: 'Bir şeyi yapmayı bırakmak',                     example: 'Never give up on your dreams.',            exampleTr: 'Hayallerinden asla vazgeçme.',                       type: 'verb' },
+      { id: '2',  word: 'Look after',   tr: 'İlgilenmek, bakmak',   def: 'Birinin veya bir şeyin bakımını üstlenmek',     example: 'She looks after her little brother.',      exampleTr: 'Küçük kardeşine bakıyor.',                           type: 'verb' },
+      { id: '3',  word: 'Run into',     tr: 'Rastlamak',            def: 'Beklenmedik şekilde karşılaşmak',               example: 'I ran into an old friend today.',          exampleTr: 'Bugün eski bir arkadaşa rastladım.',                 type: 'verb' },
+      { id: '4',  word: 'Put off',      tr: 'Ertelemek',            def: 'Bir işi sonraya bırakmak',                      example: 'Do not put off your homework.',            exampleTr: 'Ödevini erteleme.',                                  type: 'verb' },
+      { id: '5',  word: 'Turn down',    tr: 'Reddetmek',            def: 'Bir teklifi kabul etmemek',                     example: 'She turned down the job offer.',           exampleTr: 'İş teklifini reddetti.',                             type: 'verb' },
+      { id: '6',  word: 'Carry on',     tr: 'Devam etmek',          def: 'Bir şeyi sürdürmek',                            example: 'Carry on with your work.',                 exampleTr: 'İşine devam et.',                                    type: 'verb' },
+      { id: '7',  word: 'Find out',     tr: 'Öğrenmek',             def: 'Bilgi edinmek, keşfetmek',                      example: 'I need to find out the truth.',            exampleTr: 'Gerçeği öğrenmem gerek.',                            type: 'verb' },
+      { id: '8',  word: 'Get over',     tr: 'Atlatmak',             def: 'Bir zorluğu veya hastalığı aşmak',              example: 'It took months to get over the flu.',      exampleTr: 'Gribi atlatmak aylar sürdü.',                        type: 'verb' },
+      { id: '9',  word: 'Set up',       tr: 'Kurmak',               def: 'Bir şeyi oluşturmak veya başlatmak',            example: 'They set up a new company.',               exampleTr: 'Yeni bir şirket kurdular.',                          type: 'verb' },
+      { id: '10', word: 'Break down',   tr: 'Bozulmak',             def: 'Çalışmayı durdurmak, arızalanmak',              example: 'The car broke down on the highway.',       exampleTr: 'Araba otoyolda bozuldu.',                            type: 'verb' },
+      { id: '11', word: 'Bring up',     tr: 'Gündeme getirmek',     def: 'Bir konuyu açmak; çocuk yetiştirmek',           example: 'She brought up an interesting point.',     exampleTr: 'İlginç bir noktayı gündeme getirdi.',                type: 'verb' },
+      { id: '12', word: 'Call off',     tr: 'İptal etmek',          def: 'Planlanan bir şeyi iptal etmek',                example: 'The match was called off due to rain.',    exampleTr: 'Maç yağmur nedeniyle iptal edildi.',                 type: 'verb' },
+      { id: '13', word: 'Come across',  tr: 'Denk gelmek',          def: 'Tesadüfen bulmak',                              example: 'I came across this book in a café.',       exampleTr: 'Bu kitaba bir kafede denk geldim.',                  type: 'verb' },
+      { id: '14', word: 'Deal with',    tr: 'Başa çıkmak',          def: 'Bir sorunla ilgilenmek',                        example: 'She deals with customer complaints.',      exampleTr: 'Müşteri şikayetleriyle ilgileniyor.',                type: 'verb' },
+      { id: '15', word: 'Figure out',   tr: 'Çözmek, anlamak',      def: 'Düşünerek bir çözüme ulaşmak',                  example: 'I cannot figure out this puzzle.',         exampleTr: 'Bu bulmacayı çözemiyorum.',                          type: 'verb' },
+      { id: '16', word: 'Give in',      tr: 'Boyun eğmek',          def: 'Direnmeyi bırakıp kabul etmek',                 example: 'He finally gave in to pressure.',          exampleTr: 'Sonunda baskıya boyun eğdi.',                        type: 'verb' },
+      { id: '17', word: 'Hold on',      tr: 'Beklemek',             def: 'Kısa süre beklemek',                            example: 'Hold on, I will check for you.',           exampleTr: 'Bekle, senin için kontrol edeyim.',                  type: 'verb' },
+      { id: '18', word: 'Keep up',      tr: 'Ayak uydurmak',        def: 'Aynı hızda devam etmek',                        example: 'It is hard to keep up with technology.',   exampleTr: 'Teknolojiye ayak uydurmak zor.',                     type: 'verb' },
+      { id: '19', word: 'Let down',     tr: 'Hayal kırıklığına uğratmak', def: 'Birinin beklentisini karşılamamak',       example: 'I will not let you down.',                 exampleTr: 'Seni hayal kırıklığına uğratmayacağım.',             type: 'verb' },
+      { id: '20', word: 'Look forward to', tr: 'Dört gözle beklemek', def: 'Bir şeyi hevesle beklemek',                   example: 'I look forward to seeing you.',            exampleTr: 'Seni görmeyi dört gözle bekliyorum.',                type: 'verb' },
+      { id: '21', word: 'Make up',      tr: 'Uydurmak; barışmak',   def: 'Hikaye uydurmak veya küslüğü bitirmek',         example: 'He made up an excuse.',                    exampleTr: 'Bir bahane uydurdu.',                                type: 'verb' },
+      { id: '22', word: 'Pick up',      tr: 'Almak; öğrenmek',      def: 'Yerden almak; giderek öğrenmek',                example: 'She picked up Spanish quickly.',           exampleTr: 'İspanyolcayı hızla öğrendi.',                        type: 'verb' },
+      { id: '23', word: 'Point out',    tr: 'Belirtmek',            def: 'Dikkat çekmek, işaret etmek',                   example: 'He pointed out a serious mistake.',        exampleTr: 'Ciddi bir hataya dikkat çekti.',                     type: 'verb' },
+      { id: '24', word: 'Put up with',  tr: 'Katlanmak',            def: 'Hoş olmayan bir duruma tahammül etmek',         example: 'I cannot put up with this noise.',         exampleTr: 'Bu gürültüye katlanamıyorum.',                       type: 'verb' },
+      { id: '25', word: 'Run out of',   tr: 'Tükenmek',             def: 'Bir şeyin stokunun bitmesi',                    example: 'We ran out of milk.',                      exampleTr: 'Sütümüz bitti.',                                     type: 'verb' },
+      { id: '26', word: 'Take after',   tr: 'Çekmek, benzemek',     def: 'Aile büyüğüne benzemek',                        example: 'She takes after her mother.',              exampleTr: 'Annesine çekmiş.',                                   type: 'verb' },
+      { id: '27', word: 'Take off',     tr: 'Havalanmak; çıkarmak', def: 'Uçağın kalkması; kıyafet çıkarmak',             example: 'The plane took off on time.',              exampleTr: 'Uçak zamanında havalandı.',                          type: 'verb' },
+      { id: '28', word: 'Turn up',      tr: 'Çıkagelmek',           def: 'Beklenmedik şekilde ortaya çıkmak',             example: 'He turned up late to the meeting.',        exampleTr: 'Toplantıya geç çıkageldi.',                          type: 'verb' },
+      { id: '29', word: 'Work out',     tr: 'Çözmek; egzersiz yapmak', def: 'Sonuca ulaştırmak; spor yapmak',             example: 'Everything worked out fine.',              exampleTr: 'Her şey yolunda gitti.',                             type: 'verb' },
+      { id: '30', word: 'Look up',      tr: 'Aramak (sözlükte)',    def: 'Bilgiyi kaynaktan bulmak',                      example: 'Look up the word in a dictionary.',        exampleTr: 'Kelimeyi sözlükte ara.',                             type: 'verb' },
+    ],
+  },
+  {
+    id: '7', name: 'B2 Kelimeler', color: '#10B981', bg: '#ECFDF5', symbol: 'book.closed.fill',
+    words: [
+      { id: '1',  word: 'Elaborate',     tr: 'Ayrıntılı',        def: 'Çok detaylı ve özenli',                          example: 'They made elaborate plans.',                 exampleTr: 'Ayrıntılı planlar yaptılar.',                      type: 'adjective' },
+      { id: '2',  word: 'Genuine',       tr: 'Gerçek, içten',    def: 'Sahte olmayan, samimi',                          example: 'Her surprise was genuine.',                  exampleTr: 'Şaşkınlığı gerçekti.',                             type: 'adjective' },
+      { id: '3',  word: 'Deceive',       tr: 'Aldatmak',         def: 'Birini kandırmak',                               example: 'He deceived everyone with his lies.',        exampleTr: 'Yalanlarıyla herkesi aldattı.',                    type: 'verb' },
+      { id: '4',  word: 'Anticipate',    tr: 'Öngörmek',         def: 'Bir şeyi önceden tahmin etmek',                  example: 'We anticipate strong demand.',               exampleTr: 'Güçlü bir talep öngörüyoruz.',                     type: 'verb' },
+      { id: '5',  word: 'Bias',          tr: 'Önyargı',          def: 'Tarafsız olmayan eğilim',                        example: 'The article shows clear bias.',              exampleTr: 'Makale açık önyargı içeriyor.',                    type: 'noun' },
+      { id: '6',  word: 'Coherent',      tr: 'Tutarlı',          def: 'Mantıksal olarak bağlantılı',                    example: 'She gave a coherent explanation.',           exampleTr: 'Tutarlı bir açıklama yaptı.',                      type: 'adjective' },
+      { id: '7',  word: 'Deficiency',    tr: 'Eksiklik',         def: 'Gerekli bir şeyin yetersizliği',                 example: 'Vitamin D deficiency is common.',            exampleTr: 'D vitamini eksikliği yaygındır.',                  type: 'noun' },
+      { id: '8',  word: 'Distinct',      tr: 'Belirgin, farklı', def: 'Açıkça ayırt edilebilen',                        example: 'The two ideas are quite distinct.',          exampleTr: 'İki fikir oldukça farklı.',                        type: 'adjective' },
+      { id: '9',  word: 'Endeavor',      tr: 'Çaba',             def: 'Ciddi ve kararlı girişim',                       example: 'Learning a language is a worthy endeavor.',  exampleTr: 'Dil öğrenmek değerli bir çabadır.',                type: 'noun' },
+      { id: '10', word: 'Feasible',      tr: 'Uygulanabilir',    def: 'Yapılması mümkün olan',                          example: 'The plan seems feasible.',                   exampleTr: 'Plan uygulanabilir görünüyor.',                    type: 'adjective' },
+      { id: '11', word: 'Fragile',       tr: 'Kırılgan',         def: 'Kolayca zarar görebilen',                        example: 'Handle the fragile package carefully.',      exampleTr: 'Kırılgan paketi dikkatli taşı.',                   type: 'adjective' },
+      { id: '12', word: 'Grasp',         tr: 'Kavramak',         def: 'Tam olarak anlamak',                             example: 'She quickly grasped the concept.',           exampleTr: 'Kavramı hızla kavradı.',                           type: 'verb' },
+      { id: '13', word: 'Hazard',        tr: 'Tehlike',          def: 'Zarar verme potansiyeli olan şey',               example: 'Smoking is a health hazard.',                exampleTr: 'Sigara bir sağlık tehlikesidir.',                  type: 'noun' },
+      { id: '14', word: 'Imply',         tr: 'İma etmek',        def: 'Doğrudan söylemeden anlatmak',                   example: 'His tone implied disapproval.',              exampleTr: 'Ses tonu onaylamadığını ima ediyordu.',            type: 'verb' },
+      { id: '15', word: 'Inherent',      tr: 'Doğasında olan',   def: 'Bir şeyin özünde bulunan',                       example: 'Risk is inherent in every investment.',      exampleTr: 'Risk her yatırımın doğasında vardır.',             type: 'adjective' },
+      { id: '16', word: 'Compromise',    tr: 'Uzlaşma',          def: 'Karşılıklı taviz vererek anlaşma',               example: 'They reached a fair compromise.',            exampleTr: 'Adil bir uzlaşmaya vardılar.',                     type: 'noun' },
+      { id: '17', word: 'Notion',        tr: 'Kavram, fikir',    def: 'Bir şey hakkındaki inanç veya düşünce',          example: 'The notion of free time is changing.',       exampleTr: 'Boş zaman kavramı değişiyor.',                     type: 'noun' },
+      { id: '18', word: 'Overwhelm',     tr: 'Bunaltmak',        def: 'Duygu veya iş yüküyle ezmek',                    example: 'She was overwhelmed with joy.',              exampleTr: 'Sevinçten bunaldı.',                               type: 'verb' },
+      { id: '19', word: 'Plausible',     tr: 'Akla yatkın',      def: 'İnandırıcı görünen',                             example: 'That is a plausible explanation.',           exampleTr: 'Bu akla yatkın bir açıklama.',                     type: 'adjective' },
+      { id: '20', word: 'Reinforce',     tr: 'Pekiştirmek',      def: 'Daha güçlü hale getirmek',                       example: 'Practice reinforces learning.',              exampleTr: 'Pratik öğrenmeyi pekiştirir.',                     type: 'verb' },
+      { id: '21', word: 'Scarce',        tr: 'Kıt',              def: 'Az bulunan, yetersiz',                           example: 'Clean water is scarce in the region.',       exampleTr: 'Bölgede temiz su kıt.',                            type: 'adjective' },
+      { id: '22', word: 'Subtle',        tr: 'İnce, belli belirsiz', def: 'Fark edilmesi güç olan',                     example: 'There is a subtle difference between them.', exampleTr: 'Aralarında ince bir fark var.',                    type: 'adjective' },
+      { id: '23', word: 'Tangible',      tr: 'Somut',            def: 'Dokunulabilir, elle tutulur',                    example: 'We need tangible results.',                  exampleTr: 'Somut sonuçlara ihtiyacımız var.',                 type: 'adjective' },
+      { id: '24', word: 'Underlying',    tr: 'Altta yatan',      def: 'Görünenin arkasındaki temel',                    example: 'The underlying cause is stress.',            exampleTr: 'Altta yatan neden stres.',                         type: 'adjective' },
+      { id: '25', word: 'Versatile',     tr: 'Çok yönlü',        def: 'Birçok işe uyum sağlayabilen',                   example: 'She is a versatile musician.',               exampleTr: 'Çok yönlü bir müzisyen.',                          type: 'adjective' },
+      { id: '26', word: 'Withstand',     tr: 'Dayanmak',         def: 'Bir etkiye karşı koymak',                        example: 'The bridge can withstand earthquakes.',      exampleTr: 'Köprü depremlere dayanabilir.',                    type: 'verb' },
+      { id: '27', word: 'Accumulate',    tr: 'Birikmek',         def: 'Zamanla artarak toplanmak',                      example: 'Dust accumulated on the shelves.',           exampleTr: 'Raflarda toz birikti.',                            type: 'verb' },
+      { id: '28', word: 'Brevity',       tr: 'Kısalık',          def: 'Kısa ve öz olma durumu',                         example: 'Brevity is the soul of wit.',                exampleTr: 'Kısalık zekanın ruhudur.',                         type: 'noun' },
+      { id: '29', word: 'Cease',         tr: 'Durmak, kesmek',   def: 'Sona ermek veya erdirmek',                       example: 'The rain finally ceased.',                   exampleTr: 'Yağmur sonunda durdu.',                            type: 'verb' },
+      { id: '30', word: 'Dispute',       tr: 'Anlaşmazlık',      def: 'Taraflar arası uyuşmazlık',                      example: 'They settled the dispute peacefully.',       exampleTr: 'Anlaşmazlığı barışçıl çözdüler.',                  type: 'noun' },
+      { id: '31', word: 'Eligible',      tr: 'Uygun, hak sahibi', def: 'Gerekli şartları taşıyan',                      example: 'You are eligible for a discount.',           exampleTr: 'İndirim için uygunsun.',                           type: 'adjective' },
+      { id: '32', word: 'Fierce',        tr: 'Şiddetli, sert',   def: 'Yoğun ve güçlü',                                 example: 'Competition in the market is fierce.',       exampleTr: 'Piyasadaki rekabet şiddetli.',                     type: 'adjective' },
+      { id: '33', word: 'Glimpse',       tr: 'Kısa bakış',       def: 'Bir anlık görme',                                example: 'I caught a glimpse of the sea.',             exampleTr: 'Denizi bir anlığına gördüm.',                      type: 'noun' },
+      { id: '34', word: 'Immense',       tr: 'Muazzam',          def: 'Son derece büyük',                               example: 'The project requires immense effort.',       exampleTr: 'Proje muazzam çaba gerektiriyor.',                 type: 'adjective' },
+      { id: '35', word: 'Jeopardize',    tr: 'Tehlikeye atmak',  def: 'Riske sokmak',                                   example: 'Do not jeopardize your career.',             exampleTr: 'Kariyerini tehlikeye atma.',                       type: 'verb' },
+      { id: '36', word: 'Keen',          tr: 'Hevesli, keskin',  def: 'İstekli; güçlü (algı)',                          example: 'She has a keen eye for detail.',             exampleTr: 'Detaylara karşı keskin bir gözü var.',             type: 'adjective' },
+      { id: '37', word: 'Linger',        tr: 'Oyalanmak',        def: 'Gerekli olandan uzun kalmak',                    example: 'The smell lingered for hours.',              exampleTr: 'Koku saatlerce kaldı.',                            type: 'verb' },
+      { id: '38', word: 'Mediocre',      tr: 'Vasat',            def: 'Ortalama, sıradan kalitede',                     example: 'The film received mediocre reviews.',        exampleTr: 'Film vasat eleştiriler aldı.',                     type: 'adjective' },
+      { id: '39', word: 'Nurture',       tr: 'Beslemek, yetiştirmek', def: 'Gelişimine destek olmak',                   example: 'Parents nurture their children.',            exampleTr: 'Ebeveynler çocuklarını yetiştirir.',               type: 'verb' },
+      { id: '40', word: 'Optimal',       tr: 'En uygun',         def: 'Mümkün olan en iyi',                             example: 'Find the optimal solution.',                 exampleTr: 'En uygun çözümü bul.',                             type: 'adjective' },
+    ],
+  },
 ];
 
 export async function loadDueWords(): Promise<StudyWord[]> {
@@ -222,9 +347,48 @@ export async function loadDueWords(): Promise<StudyWord[]> {
   }
 }
 
+export type FavRef = { listId: string; wordId: string };
+
+export async function loadFavRefs(): Promise<FavRef[]> {
+  try {
+    const raw = await AsyncStorage.getItem('fav_words');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function toggleFav(listId: string, wordId: string): Promise<boolean> {
+  const favs = await loadFavRefs();
+  const idx = favs.findIndex(f => f.listId === listId && f.wordId === wordId);
+  if (idx >= 0) favs.splice(idx, 1);
+  else favs.push({ listId, wordId });
+  await AsyncStorage.setItem('fav_words', JSON.stringify(favs));
+  return idx < 0; // yeni durum: favori mi
+}
+
+export async function loadFavWords(): Promise<StudyWord[]> {
+  const favs = await loadFavRefs();
+  if (favs.length === 0) return [];
+  const byList = new Map<string, string[]>();
+  for (const f of favs) {
+    if (!byList.has(f.listId)) byList.set(f.listId, []);
+    byList.get(f.listId)!.push(f.wordId);
+  }
+  const result: StudyWord[] = [];
+  for (const [listId, wordIds] of byList) {
+    const words = await loadStudyWords(listId);
+    for (const w of words) {
+      if (wordIds.includes(w.id)) result.push({ ...w, _listId: listId });
+    }
+  }
+  return result;
+}
+
 export async function loadStudyWords(listId: string | undefined): Promise<StudyWord[]> {
   if (!listId) return DEFAULT_LISTS[0].words;
   if (listId === '_due') return loadDueWords();
+  if (listId === '_fav') return loadFavWords();
 
   const def = DEFAULT_LISTS.find(l => l.id === listId);
   const defWords = def ? def.words : [];

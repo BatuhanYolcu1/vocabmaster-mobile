@@ -1,11 +1,13 @@
-import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SymbolView } from 'expo-symbols';
 import { Colors } from '../../constants/colors';
-import { DEFAULT_LISTS as WORD_LISTS } from '../../data/demoWords';
+import { DEFAULT_LISTS as WORD_LISTS, StudyWord } from '../../data/demoWords';
+
+type SearchEntry = StudyWord & { listId: string; listName: string; listColor: string };
 
 type ListItem = {
   id: string; name: string; desc: string; symbol: string;
@@ -17,6 +19,9 @@ const DESCS: Record<string, string> = {
   '2': 'Profesyonel ortam',
   '3': 'Üniversite düzeyi',
   '4': 'Gezi ve turizm',
+  '5': 'Sınav hazırlık',
+  '6': 'Deyimsel fiiller',
+  '7': 'Üst-orta seviye',
 };
 
 const DEFAULT_LISTS: ListItem[] = WORD_LISTS.map((l, i) => ({
@@ -26,6 +31,8 @@ const DEFAULT_LISTS: ListItem[] = WORD_LISTS.map((l, i) => ({
 
 export default function CategoriesScreen() {
   const [lists, setLists] = useState<ListItem[]>(DEFAULT_LISTS);
+  const [query, setQuery] = useState('');
+  const [searchIndex, setSearchIndex] = useState<SearchEntry[]>([]);
 
   const loadLists = useCallback(async () => {
     const raw = await AsyncStorage.getItem('custom_lists');
@@ -38,6 +45,19 @@ export default function CategoriesScreen() {
       return { ...l, count: base + extra };
     }));
     setLists(all);
+
+    // Arama dizini: tüm listelerdeki tüm kelimeler
+    const entries: SearchEntry[] = [];
+    for (const dl of WORD_LISTS) {
+      for (const w of dl.words) entries.push({ ...w, listId: dl.id, listName: dl.name, listColor: dl.color });
+    }
+    for (const l of all) {
+      const wr = await AsyncStorage.getItem(`words_${l.id}`);
+      if (!wr) continue;
+      const words: StudyWord[] = JSON.parse(wr);
+      for (const w of words) entries.push({ ...w, listId: l.id, listName: l.name, listColor: l.color });
+    }
+    setSearchIndex(entries);
   }, []);
 
   // Refresh every time the screen comes into focus (e.g. after creating a new list)
@@ -91,6 +111,14 @@ export default function CategoriesScreen() {
 
   const totalWords = lists.reduce((a, l) => a + (l.count || 0), 0);
 
+  const searchResults = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return searchIndex
+      .filter(w => w.word.toLowerCase().includes(q) || w.tr.toLowerCase().includes(q))
+      .slice(0, 30);
+  }, [query, searchIndex]);
+
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
@@ -107,11 +135,52 @@ export default function CategoriesScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Global kelime arama */}
+      <View style={s.searchWrap}>
+        <SymbolView name="magnifyingglass" size={15} tintColor={Colors.textMuted} type="monochrome" />
+        <TextInput
+          style={s.searchInput}
+          placeholder="Tüm listelerde kelime ara..."
+          placeholderTextColor={Colors.textMuted}
+          value={query}
+          onChangeText={setQuery}
+          clearButtonMode="while-editing"
+          autoCorrect={false}
+        />
+      </View>
+
       <ScrollView
         contentContainerStyle={s.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={false} onRefresh={loadLists} tintColor={Colors.primary} />}
       >
+        {query.trim() ? (
+          searchResults.length > 0 ? (
+            searchResults.map((w) => (
+              <TouchableOpacity
+                key={`${w.listId}_${w.id}`}
+                style={s.resultCard}
+                onPress={() => router.push({ pathname: '/words/detail' as any, params: { listId: w.listId, wordId: w.id } })}
+                activeOpacity={0.75}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={s.resultWord}>{w.word}</Text>
+                  <Text style={s.resultTr}>{w.tr}</Text>
+                </View>
+                <View style={[s.resultListBadge, { backgroundColor: w.listColor + '15' }]}>
+                  <Text style={[s.resultListText, { color: w.listColor }]} numberOfLines={1}>{w.listName}</Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={s.noResult}>
+              <SymbolView name="magnifyingglass" size={26} tintColor={Colors.textMuted} type="monochrome" />
+              <Text style={s.noResultText}>"{query.trim()}" bulunamadı</Text>
+            </View>
+          )
+        ) : (
+        <>
         {lists.map((list) => (
           <TouchableOpacity
             key={list.id}
@@ -147,6 +216,8 @@ export default function CategoriesScreen() {
           <Text style={s.emptyText}>Yeni liste oluştur</Text>
           <Text style={s.emptyDesc}>Kendi kelime setini ekle</Text>
         </TouchableOpacity>
+        </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -166,6 +237,16 @@ const s = StyleSheet.create({
   },
   addText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   content: { paddingHorizontal: 20, paddingBottom: 120 },
+
+  searchWrap: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, backgroundColor: Colors.bgCard, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, gap: 10, marginBottom: 14, borderWidth: 1, borderColor: Colors.border },
+  searchInput: { flex: 1, fontSize: 15, color: Colors.textPrimary, padding: 0 },
+  resultCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Colors.bgCard, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 3, elevation: 1 },
+  resultWord: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+  resultTr: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  resultListBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, maxWidth: 120 },
+  resultListText: { fontSize: 10, fontWeight: '700' },
+  noResult: { alignItems: 'center', paddingTop: 60, gap: 10 },
+  noResultText: { color: Colors.textMuted, fontSize: 14 },
   card: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.bgCard, borderRadius: 16, padding: 16, marginBottom: 10,
