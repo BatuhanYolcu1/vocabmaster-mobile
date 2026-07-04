@@ -193,6 +193,14 @@ export default function WordListScreen() {
       <TouchableOpacity
         style={[s.fab, { backgroundColor: list.color }]}
         onPress={() => router.push({ pathname: '/words/add' as any, params: { listId } })}
+        onLongPress={() => {
+          Alert.alert('Kelime Ekle', undefined, [
+            { text: 'Tek Kelime', onPress: () => router.push({ pathname: '/words/add' as any, params: { listId } }) },
+            { text: 'Toplu Ekle (yapıştır)', onPress: () => router.push({ pathname: '/words/import' as any, params: { listId } }) },
+            { text: 'İptal', style: 'cancel' },
+          ]);
+        }}
+        delayLongPress={400}
         activeOpacity={0.88}
       >
         <SymbolView name="plus" size={22} tintColor="#fff" type="monochrome" />

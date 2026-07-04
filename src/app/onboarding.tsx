@@ -53,6 +53,13 @@ const GOAL_OPTIONS = [
   { value: 30, label: '30', sub: 'Ateşli' },
 ];
 
+// Seviye → önerilen başlangıç listesi (demoWords id'leri)
+const LEVEL_OPTIONS = [
+  { value: 'beginner',     label: 'Başlangıç', listId: '1' },
+  { value: 'intermediate', label: 'Orta',      listId: '7' },
+  { value: 'advanced',     label: 'İleri',     listId: '5' },
+];
+
 const TOTAL_STEPS = SLIDES.length + 1; // 4 slides + 1 setup
 
 async function completeOnboarding() {
@@ -62,6 +69,7 @@ async function completeOnboarding() {
 export default function OnboardingScreen() {
   const [step,        setStep]        = useState(0);
   const [selectedGoal, setGoal]       = useState(10);
+  const [level,       setLevel]       = useState('beginner');
   const [name,        setName]        = useState('');
 
   // Slide animation
@@ -108,6 +116,8 @@ export default function OnboardingScreen() {
     await completeOnboarding();
     if (name.trim()) await AsyncStorage.setItem('user_name', name.trim());
     await AsyncStorage.setItem('daily_goal', String(selectedGoal));
+    const lv = LEVEL_OPTIONS.find(l => l.value === level);
+    await AsyncStorage.multiSet([['user_level', level], ['preferred_list', lv?.listId ?? '1']]);
     router.replace('/(tabs)');
   };
 
@@ -190,7 +200,20 @@ export default function OnboardingScreen() {
             </Animated.View>
 
             <Text style={s.slideTitle}>Hedefini Belirle</Text>
-            <Text style={s.slideDesc}>Günde kaç kelime öğrenmek istiyorsun?</Text>
+            <Text style={s.slideDesc}>Seviyeni seç, günlük hedefini belirle</Text>
+
+            <View style={s.levelRow}>
+              {LEVEL_OPTIONS.map((lv) => (
+                <TouchableOpacity
+                  key={lv.value}
+                  style={[s.levelBtn, level === lv.value && s.levelBtnActive]}
+                  onPress={() => setLevel(lv.value)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[s.levelText, level === lv.value && s.levelTextActive]}>{lv.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <View style={s.goalGrid}>
               {GOAL_OPTIONS.map((g) => (
@@ -275,6 +298,11 @@ const s = StyleSheet.create({
 
   setupWrap: { flex: 1, paddingTop: 12, gap: 16 },
   setupIconWrap: { alignSelf: 'center', marginBottom: 8 },
+  levelRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  levelBtn: { flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: Colors.bgCard, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center' },
+  levelBtnActive: { backgroundColor: Colors.primaryLight, borderColor: Colors.primarySoft },
+  levelText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  levelTextActive: { color: Colors.primary, fontWeight: '800' },
   goalGrid: { flexDirection: 'row', gap: 10 },
   goalBtn: { flex: 1, backgroundColor: Colors.bgCard, borderRadius: 16, paddingVertical: 18, alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: Colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 2 },
   goalNum: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary },

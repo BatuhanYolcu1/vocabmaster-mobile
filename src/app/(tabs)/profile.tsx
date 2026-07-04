@@ -71,6 +71,7 @@ export default function ProfileScreen() {
   const MENU_ITEMS = [
     { label: 'Bildirimler',  symbol: 'bell.fill',               color: Colors.primary, onPress: () => router.push('/settings/notifications') },
     { label: 'Günlük Hedef', symbol: 'target',                  color: Colors.green,   onPress: () => setGoalModal(true) },
+    { label: 'Yedekleme',    symbol: 'externaldrive.fill',      color: '#06B6D4',      onPress: () => router.push('/settings/backup' as any) },
     { label: 'Gizlilik',     symbol: 'lock.shield.fill',        color: Colors.blue,    onPress: () => router.push('/settings/privacy' as any) },
     { label: 'Yardım',       symbol: 'questionmark.circle.fill', color: Colors.purple,  onPress: () => router.push('/settings/help' as any) },
   ];

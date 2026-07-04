@@ -5,8 +5,9 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
 import { SymbolView } from 'expo-symbols';
+import * as Haptics from 'expo-haptics';
 import { Colors } from '../../constants/colors';
-import { DEFAULT_LISTS, StudyWord } from '../../data/demoWords';
+import { DEFAULT_LISTS, StudyWord, loadFavRefs, toggleFav } from '../../data/demoWords';
 import { masteryFromSRS, loadSRSMap } from '../../lib/stats';
 
 const MASTERY_COLORS = ['#D1D5DB', Colors.accent, '#FBBF24', '#86EFAC', Colors.easy];
@@ -21,6 +22,13 @@ export default function WordDetailScreen() {
   const [listMeta, setListMeta] = useState<ListMeta | null>(null);
   const [mastery, setMastery] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isFav, setIsFav] = useState(false);
+
+  const handleToggleFav = async () => {
+    if (!listId || !wordId) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsFav(await toggleFav(listId, wordId));
+  };
 
   useFocusEffect(useCallback(() => {
     (async () => {
@@ -45,6 +53,9 @@ export default function WordDetailScreen() {
       setMastery(found ? masteryFromSRS(srsMap[found.id]) : 0);
       setWord(found ?? null);
       setListMeta(meta ?? { name: '', color: Colors.primary });
+
+      const favs = await loadFavRefs();
+      setIsFav(favs.some(f => f.listId === listId && f.wordId === wordId));
       setLoading(false);
     })();
   }, [listId, wordId]));
@@ -79,7 +90,14 @@ export default function WordDetailScreen() {
             <SymbolView name="chevron.left" size={16} tintColor={Colors.primary} type="monochrome" />
           </TouchableOpacity>
           <Text style={s.headerTitle}>Kelime Detayı</Text>
-          <View style={{ width: 36 }} />
+          <TouchableOpacity onPress={handleToggleFav} style={s.favBtn} activeOpacity={0.7}>
+            <SymbolView
+              name={isFav ? 'star.fill' : 'star'}
+              size={17}
+              tintColor={isFav ? Colors.warning : Colors.textMuted}
+              type="monochrome"
+            />
+          </TouchableOpacity>
         </View>
 
         {/* Hero Card */}
@@ -176,6 +194,7 @@ const s = StyleSheet.create({
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
+  favBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
   headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
 
   notFound: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
